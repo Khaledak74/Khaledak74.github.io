@@ -110,6 +110,42 @@
                     <div class="lesson">Documenting exact version compatibility (works on newer Ubuntu versions too) saves setup time for future labs.</div>
                     <a href="https://medium.com/@motaweak226/how-to-download-install-and-configure-splunk-enterprise-10-4-0-5df66a48cd71" target="_blank" class="read-more">read writeup →</a>
                 </div>
+
+                <div class="card">
+                    <div class="badge badge-completed">Completed</div>
+                    <h3 class="mono">From Simulation to Detection: T1082 System Information Discovery</h3>
+                    <p>Simulated MITRE ATT&CK T1082 using Atomic Red Team across 25 test variants, then built and validated a detection rule in Splunk from scratch — covering the full loop from attack simulation to alert firing to escalation runbook to Splunk dashboard.</p>
+                    <div class="tags">
+                        <span class="tag">Atomic Red Team</span>
+                        <span class="tag">Sysmon</span>
+                        <span class="tag">Splunk</span>
+                        <span class="tag">Windows 10</span>
+                        <span class="tag">Kali Linux</span>
+                        <span class="tag">Ubuntu Server</span>
+                        <span class="tag">MITRE ATT&CK</span>
+                    </div>
+                    <div class="lesson">Sysmon's CurrentDirectory field is one of the most underused tuning signals in detection engineering — tasklist.exe running from \Temp instead of \System32 is a stronger indicator than the binary name itself. Baseline before you simulate, always.</div>
+                    <a href="https://medium.com/@motaweak226/from-simulation-to-detection-building-and-validating-att-ck-based-rules-with-atomic-red-team-0dec5a9ea8d7?sharedUserId=motaweak226" target="_blank" class="read-more">read writeup →</a>
+                </div>
+
+                <div class="card">
+                    <div class="badge badge-completed">Completed</div>
+                    <h3 class="mono">How to Generate and Detect Attack Telemetry with Splunk: A Hands-On Lab</h3>
+                    <p>A purple team lab covering a full attack chain from Kali to Windows 10 across 6 phases — reconnaissance, brute force, initial access via PSExec, privilege escalation, lateral movement, and data exfiltration — each phase simulated and then detected in Splunk with specific SPL queries and Event IDs.</p>
+                    <div class="tags">
+                        <span class="tag">Nmap</span>
+                        <span class="tag">Hydra</span>
+                        <span class="tag">smbclient</span>
+                        <span class="tag">Impacket</span>
+                        <span class="tag">Metasploit</span>
+                        <span class="tag">certutil</span>
+                        <span class="tag">Sysmon</span>
+                        <span class="tag">Splunk</span>
+                        <span class="tag">Windows Security Logs</span>
+                    </div>
+                    <div class="lesson">Sysmon Event ID 3 misses SYN scans entirely since it only logs completed TCP connections. Brute force over SMB with modern tooling fails against NTLMv2 and SMB signing — and Sysmon EID 13 caught registry persistence (T1547.001) when the PSExec technique didn't show up where expected.</div>
+                    <a href="https://medium.com/@motaweak226/how-to-generate-and-detect-attack-telemetry-with-splunk-a-hands-on-lab-7c565f210bdc?sharedUserId=motaweak226" target="_blank" class="read-more">read writeup →</a>
+                </div>
             </div>
         </section>
     </main>

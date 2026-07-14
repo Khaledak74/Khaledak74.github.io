@@ -136,6 +136,26 @@
                     <div class="lesson">Email spoofing + brand impersonation still bypasses filters; user awareness is the last line of defense.</div>
                     <a href="https://medium.com/@motaweak226/cyberdefenders-write-up-brabbit-lab-d42ca137a748" target="_blank" class="read-more">read writeup →</a>
                 </div>
+
+                <div class="card">
+                    <div class="badge badge-completed">Completed</div>
+                    <h3 class="mono">[CyberDefenders] Phishy Lab</h3>
+                    <p>Endpoint forensics investigation on a disk image, reconstructing a full phishing attack chain: a malicious Word document delivered via WhatsApp, a macro that executed PowerShell, a downloaded Meterpreter payload, and the attacker's C2 connecting back — plus credential theft via a fake Apple login page.</p>
+                    <div class="tags">
+                        <span class="tag">FTK Imager</span>
+                        <span class="tag">Registry Explorer</span>
+                        <span class="tag">DB Browser for SQLite</span>
+                        <span class="tag">OleDump</span>
+                        <span class="tag">olevba</span>
+                        <span class="tag">CyberChef</span>
+                        <span class="tag">VirusTotal</span>
+                        <span class="tag">Any.run</span>
+                        <span class="tag">BrowserHistoryView</span>
+                        <span class="tag">PasswordFox</span>
+                    </div>
+                    <div class="lesson">The full phishing chain lives in artifacts you wouldn't think to look at — the download URL was in a WhatsApp SQLite database, the C2 IP was only visible through Any.run's sandbox behavioral analysis (not VirusTotal static detection), and the victim's browser stored a plaintext password in an encrypted logins.json that PasswordFox decrypted in seconds.</div>
+                    <a href="https://medium.com/@motaweak226/phishy-lab-cyber-defenders-writeup-98fdd149a1ac?sharedUserId=motaweak226" target="_blank" class="read-more">read writeup →</a>
+                </div>
             </div>
         </section>
     </main>
