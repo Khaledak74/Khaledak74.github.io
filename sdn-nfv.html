@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDN/NFV Projects // Motaw3</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">Motaw3<span>//</span>soc</a>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="blue-team.html">Blue Team</a></li>
+                <li><a href="red-team.html">Red Team</a></li>
+                <li><a href="soc-projects.html">SOC Projects</a></li>
+                <li><a href="sdn-nfv.html">SDN/NFV</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <section class="container">
+            <div class="page-header">
+                <h1 class="section-title">SDN / NFV Projects</h1>
+                <p>Software-Defined Networking research, controller benchmarking, programmable network security, and graduation thesis work.</p>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <div class="badge badge-completed">Completed</div>
+                    <h3 class="mono">Live SDN Network Dashboard with POX, Mininet, and React — Detects Cyberattacks</h3>
+                    <p>A browser-based real-time monitoring dashboard capturing packets and firing SIEM-style alerts tagged with MITRE ATT&CK techniques.</p>
+                    <div class="tags">
+                        <span class="tag">POX Controller</span>
+                        <span class="tag">Mininet</span>
+                        <span class="tag">React</span>
+                        <span class="tag">Packet Capture</span>
+                        <span class="tag">MITRE ATT&CK</span>
+                    </div>
+                    <div class="lesson">Combining SDN programmability with a custom front-end enables real-time attack visualization beyond traditional SIEM dashboards.</div>
+                    <a href="https://medium.com/@motaweak226/i-built-a-live-sdn-network-dashboard-with-pox-mininet-and-react-and-it-detects-cyberattacks-in-091e2ba58c75" target="_blank" class="read-more">read writeup →</a>
+                </div>
+
+                <div class="card">
+                    <div class="badge badge-completed">Completed</div>
+                    <h3 class="mono">Performance Benchmarking of POX, Ryu, HPE-VAN, OpenDaylight, and ONOS Controllers</h3>
+                    <p>Comparative research benchmarking 5 SDN controllers on bandwidth/throughput, latency, jitter, and packet loss in a fat-tree topology.</p>
+                    <div class="tags">
+                        <span class="tag">POX</span>
+                        <span class="tag">Ryu</span>
+                        <span class="tag">HPE-VAN</span>
+                        <span class="tag">OpenDaylight</span>
+                        <span class="tag">ONOS</span>
+                        <span class="tag">Fat-Tree Topology</span>
+                        <span class="tag">QoS Testing</span>
+                    </div>
+                    <div class="lesson">Controller choice materially affects QoS outcomes; benchmarking under realistic topologies (not just hop count) gives a truer performance picture.</div>
+                    <a href="https://medium.com/@motaweak226/performance-benchmarking-of-pox-ryu-hpe-van-opendaylight-and-onos-controllers-based-on-qos-13498d3b6c7f" target="_blank" class="read-more">read writeup →</a>
+                </div>
+
+                <div class="card">
+                    <div class="badge badge-completed">Completed</div>
+                    <h3 class="mono">SDN Project Using Mininet, POX, and Custom Topology with Dijkstra's Algorithm</h3>
+                    <p>Explains how Dijkstra's shortest-path algorithm solves loop, inefficiency, and routing-stability problems in a custom SDN topology.</p>
+                    <div class="tags">
+                        <span class="tag">Mininet</span>
+                        <span class="tag">POX Controller</span>
+                        <span class="tag">Dijkstra's Algorithm</span>
+                        <span class="tag">Custom Topology</span>
+                    </div>
+                    <div class="lesson">Centralized controller visibility + graph-based routing eliminates loops and beats flooding/hop-count based forwarding.</div>
+                    <a href="https://medium.com/@motaweak226/sdn-project-using-mininet-pox-and-custom-topology-with-dijkstras-algorithm-c1a3e421cb47" target="_blank" class="read-more">read writeup →</a>
+                </div>
+
+                <div class="card">
+                    <div class="badge badge-completed">Completed</div>
+                    <h3 class="mono">DDoS Attack on POX Controller with Joint Entropy Detection in SDN Networks</h3>
+                    <p>Demonstrates a DDoS attack against a centralized POX SDN controller and detecting it using joint entropy-based anomaly detection.</p>
+                    <div class="tags">
+                        <span class="tag">POX Controller</span>
+                        <span class="tag">hping3</span>
+                        <span class="tag">Entropy Detection</span>
+                        <span class="tag">SDN Security</span>
+                    </div>
+                    <div class="lesson">Centralized SDN controllers are a single point of failure under DDoS; statistical entropy detection can flag the flood before the controller is overwhelmed.</div>
+                    <a href="https://medium.com/@motaweak226/ddos-attack-on-pox-controller-with-joint-entropy-detection-in-sdn-networks-ef692e533af8" target="_blank" class="read-more">read writeup →</a>
+                </div>
+
+                <div class="card">
+                    <div class="badge badge-completed">Completed</div>
+                    <h3 class="mono">Security Enhancement of Open Flow Networks</h3>
+                    <p>Bachelor's thesis on hardening OpenFlow/SDN networks — implements a full DoS attack scenario via the Cyber Kill Chain, then builds and tests a POX-based firewall defense against SYN floods.</p>
+                    <div class="tags">
+                        <span class="tag">Mininet</span>
+                        <span class="tag">POX Controller</span>
+                        <span class="tag">OpenFlow</span>
+                        <span class="tag">Open vSwitch</span>
+                        <span class="tag">nmap</span>
+                        <span class="tag">Wireshark</span>
+                        <span class="tag">tcpdump</span>
+                        <span class="tag">hping3</span>
+                        <span class="tag">Cyber Kill Chain</span>
+                        <span class="tag">SVM</span>
+                        <span class="tag">Rate Limiting</span>
+                        <span class="tag">Blacklisting</span>
+                        <span class="tag">Load Balancing</span>
+                    </div>
+                    <div class="lesson">Centralized SDN controllers are a single point of failure under DoS, but that same centralization enables fast, programmable defenses (dynamic flow rules) — real-time SYN-rate monitoring in the controller stopped the flood while preserving legitimate traffic, and switches recovered automatically once the attack stopped.</div>
+                    <a href="https://medium.com/@motaweak226/security-enhancement-of-open-flow-networks-a0e372fda65b" target="_blank" class="read-more">read writeup →</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <span class="footer-text">© 2026 Motaw3</span>
+            <div class="social-links">
+                <a href="https://github.com/Khaledak74" target="_blank" rel="noopener" aria-label="GitHub">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                </a>
+                <a href="https://www.linkedin.com/in/khaled-motawea-0861b1265/" target="_blank" rel="noopener" aria-label="LinkedIn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+                <a href="https://www.youtube.com/@Kmotawea" target="_blank" rel="noopener" aria-label="YouTube">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="https://medium.com/@motaweak226" target="_blank" rel="noopener" aria-label="Medium">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13.54 12a6.8 6.8 0 0 1-6.77 6.82A6.8 6.8 0 0 1 0 12a6.8 6.8 0 0 1 6.77-6.82A6.8 6.8 0 0 1 13.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42s-3.38-2.88-3.38-6.42 1.51-6.42 3.38-6.42 3.38 2.88 3.38 6.42zM24 12c0 3.17-.53 5.75-1.19 5.75s-1.19-2.58-1.19-5.75.53-5.75 1.19-5.75S24 8.83 24 12z"/></svg>
+                </a>
+                <a href="https://www.instagram.com/kmotawea16" target="_blank" rel="noopener" aria-label="Instagram">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.054 1.805.249 2.227.412.56.216.96.474 1.38.894.42.42.678.82.894 1.38.163.422.358 1.057.412 2.227.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.054 1.17-.249 1.805-.412 2.227-.216.56-.474.96-.894 1.38-.42.42-.82.678-1.38.894-.422.163-1.057.358-2.227.412-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.17-.054-1.805-.249-2.227-.412-.56-.216-.96-.474-1.38-.894-.42-.42-.678-.82-.894-1.38-.163-.422-.358-1.057-.412-2.227-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.054-1.17.249-1.805.412-2.227.216-.56.474-.96.894-1.38.42-.42.82-.678 1.38-.894.422-.163 1.057-.358 2.227-.412 1.266-.058 1.646-.07 4.85-.07zM12 0C8.741 0 8.333.014 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.132 5.775.072 7.053.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126s1.384 1.078 2.126 1.384c.766.296 1.636.499 2.913.558C8.333 23.986 8.741 24 12 24s3.667-.014 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.717 2.126-1.384s1.078-1.384 1.384-2.126c.296-.765.499-1.636.558-2.913.058-1.28.072-1.687.072-4.947s-.014-3.667-.072-4.947c-.06-1.277-.262-2.148-.558-2.913-.306-.788-.717-1.459-1.384-2.126s-1.384-1.078-2.126-1.384c-.765-.296-1.636-.499-2.913-.558C15.667.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                </a>
+            </div>
+            <span class="footer-text">Built with caffeine & curiosity</span>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+</html>
