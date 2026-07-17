@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>// Motaw3 // SOC Analyst</title>
-    <meta name="description" content="SOC Analyst portfolio - Blue team labs, red team projects, SOC home labs, SDN/NFV research, and cybersecurity writeups.">
+    <title>// Motaw3 // Detection Rules</title>
+    <meta name="description" content="Splunk / Sysmon detection rules mapped to MITRE ATT&CK, built from Atomic Red Team home-lab testing.">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
 </head>
@@ -32,50 +32,31 @@
     </nav>
 
     <main>
-        <section class="hero">
+        <section class="page-header rules-page-header">
             <div class="container">
-                <h1 class="mono">// Motaw3</h1>
-                <p class="subtitle mono">SOC Analyst | Blue Team Defender | Threat Hunter</p>
-                <p class="tagline">Documenting the journey from zero to SOC analyst. Real SIEM alerts, real triage, real analyst thinking — not just answers.</p>
-                <div class="hero-cta">
-                    <a href="blue-team.html" class="btn btn-primary">Blue Team Labs →</a>
-                    <a href="soc-projects.html" class="btn btn-outline">SOC Projects</a>
-                </div>
+                <h1 class="mono">// Detection Rules</h1>
+                <p>Splunk / Sysmon detection rules written while running Atomic Red Team against a Windows 10 + Sysmon home lab, mapped to MITRE ATT&amp;CK. Select a technique on the left to filter — the correlation search at the top is always pinned, since it's the rule that ties everything else together.</p>
             </div>
         </section>
 
-        <div class="divider"></div>
+        <section class="rules-section">
+            <div class="container rules-layout">
 
-        <section style="padding: 2rem 0;">
-            <div class="container">
-                <h2 class="section-title">Highlights</h2>
-                <div class="card-grid">
-                    <div class="card">
-                        <h3 class="mono">Blue Team Labs</h3>
-                        <p>Hands-on defensive security labs. Real forensic challenges, malware analysis, and network investigations.</p>
-                        <a href="blue-team.html" class="read-more">explore labs →</a>
+                <aside class="rules-sidebar" id="rules-sidebar" aria-label="MITRE ATT&CK technique filter">
+                    <!-- populated by rules.js -->
+                </aside>
+
+                <div class="rules-main">
+                    <div class="rules-toolbar">
+                        <span class="rules-active-filter mono">Showing: <strong id="active-filter-label">All Techniques</strong></span>
+                        <span class="rules-count mono" id="rules-count"></span>
                     </div>
-                    <div class="card">
-                        <h3 class="mono">Red Team Labs</h3>
-                        <p>Offensive security simulations and attack methodology labs mapped to the Cyber Kill Chain.</p>
-                        <a href="red-team.html" class="read-more">explore red team →</a>
-                    </div>
-                    <div class="card">
-                        <h3 class="mono">SOC Projects / Home Labs</h3>
-                        <p>End-to-end SOC infrastructure builds, SIEM deployments, log pipelines, and detection engineering.</p>
-                        <a href="soc-projects.html" class="read-more">explore projects →</a>
-                    </div>
-                    <div class="card">
-                        <h3 class="mono">SDN / NFV Projects</h3>
-                        <p>Software-Defined Networking research, controller benchmarking, and programmable network security.</p>
-                        <a href="sdn-nfv.html" class="read-more">explore SDN/NFV →</a>
-                    </div>
-                    <div class="card">
-                        <h3 class="mono">Blog & Writeups</h3>
-                        <p>Detailed walkthroughs, threat analysis, and lessons learned from hands-on labs and research.</p>
-                        <a href="blog.html" class="read-more">read blog →</a>
+
+                    <div id="rules-list" class="rules-list">
+                        <!-- populated by rules.js -->
                     </div>
                 </div>
+
             </div>
         </section>
     </main>
@@ -100,10 +81,12 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.054 1.805.249 2.227.412.56.216.96.474 1.38.894.42.42.678.82.894 1.38.163.422.358 1.057.412 2.227.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.054 1.17-.249 1.805-.412 2.227-.216.56-.474.96-.894 1.38-.42.42-.82.678-1.38.894-.422.163-1.057.358-2.227.412-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.17-.054-1.805-.249-2.227-.412-.56-.216-.96-.474-1.38-.894-.42-.42-.678-.82-.894-1.38-.163-.422-.358-1.057-.412-2.227-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.054-1.17.249-1.805.412-2.227.216-.56.474-.96.894-1.38.42-.42.82-.678 1.38-.894.422-.163 1.057-.358 2.227-.412 1.266-.058 1.646-.07 4.85-.07zM12 0C8.741 0 8.333.014 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.132 5.775.072 7.053.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126s1.384 1.078 2.126 1.384c.766.296 1.636.499 2.913.558C8.333 23.986 8.741 24 12 24s3.667-.014 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.717 2.126-1.384s1.078-1.384 1.384-2.126c.296-.765.499-1.636.558-2.913.058-1.28.072-1.687.072-4.947s-.014-3.667-.072-4.947c-.06-1.277-.262-2.148-.558-2.913-.306-.788-.717-1.459-1.384-2.126s-1.384-1.078-2.126-1.384c-.765-.296-1.636-.499-2.913-.558C15.667.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                 </a>
             </div>
-            <span class="footer-text">Built with caffeine & curiosity</span>
+            <span class="footer-text">Built with caffeine &amp; curiosity</span>
         </div>
     </footer>
 
+    <script src="rules-data.js"></script>
+    <script src="rules.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
