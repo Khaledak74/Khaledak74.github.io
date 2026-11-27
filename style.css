@@ -1499,3 +1499,84 @@ main {
         gap: 0.5rem;
     }
 }
+
+
+
+/* --- Blog cards --- */
+.blog-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.blog-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: var(--transition);
+}
+
+.blog-card:hover {
+    border-color: var(--accent-cyan);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.blog-card-badge {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.9rem;
+    border-radius: 999px;
+    color: var(--accent-green);
+    background: rgba(63, 185, 80, 0.12);
+    border: 1px solid rgba(63, 185, 80, 0.35);
+}
+
+.blog-card-title {
+    font-size: 1.3rem;
+    line-height: 1.35;
+}
+
+.blog-card-desc {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.blog-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.blog-card-tags span {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+}
+
+.blog-card-lesson {
+    color: var(--accent-yellow);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-light);
+    padding-top: 1rem;
+    margin-top: auto;
+}
+
+.blog-card-lesson .lesson-label {
+    font-weight: 600;
+}
+
+.blog-card-link {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+}
