@@ -1580,3 +1580,9 @@ main {
     font-family: var(--font-mono);
     font-size: 0.9rem;
 }
+
+.blog-card-links {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
