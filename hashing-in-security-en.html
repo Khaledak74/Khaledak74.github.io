@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hashing in Real Security Work // Motaw3</title>
+    <meta name="description" content="From the vendor report, to the SIEM, to a lab you build yourself. This article is the written version of an 8-chapter video.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
+    <style>
+.post-content{max-width:820px;margin:0 auto}
+.post-content h3{font-family:var(--font-mono);color:var(--text-primary);margin:2rem 0 .75rem;font-size:1.15rem}
+.post-content .figure{margin:1.5rem 0;text-align:center}
+.post-content .figure img{display:inline-block;max-width:100%;background:#fff;border:1px solid var(--border-color);border-radius:var(--radius);padding:.5rem}
+.post-content figcaption,.refline{font-size:.8rem;color:var(--text-muted);font-family:var(--font-mono)}
+.refline{margin:-.5rem 0 1.5rem;word-break:break-all;text-align:left;direction:ltr}
+.post-content .tbl{overflow-x:auto}
+.post-content pre code{white-space:pre;font-size:.85rem}
+.post-content ol{padding-left:1.5rem;margin-bottom:1.5rem;color:var(--text-secondary)}
+.toc{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius);padding:1rem 1.5rem;margin:1.5rem 0}
+.toc ol{margin:.5rem 0 0;padding-left:1.5rem}
+.post-content .note{border-left:3px solid var(--accent-yellow);padding:.75rem 1rem;background:var(--bg-card);border-radius:var(--radius-sm)}
+.post-content .badge{display:inline-flex}
+[dir=rtl] .post-content ul,[dir=rtl] .post-content ol:not([dir=ltr]){padding-left:0;padding-right:1.5rem}
+[dir=rtl] .post-content h2::before{content:"# "}
+</style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">Motaw3<span>//</span>soc</a>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="blue-team.html">Blue Team</a></li>
+                <li><a href="red-team.html">Red Team</a></li>
+                <li><a href="soc-projects.html">SOC Projects</a></li>
+		<li><a href="rules.html">Rules</a></li>
+                <li><a href="sdn-nfv.html">SDN/NFV</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <article class="container">
+            <header class="post-header">
+                <h1 class="mono">Hashing in Real Security Work</h1>
+                <p class="post-meta mono">2026-11-27 · Motaw3 · hashing / threat hunting / SIEM / threat intel · <a href="hashing-in-security-ar.html">عربي</a></p>
+            </header>
+            <div class="post-content" >
+                <p>From the vendor report, to the SIEM, to a lab you build yourself. This article is the written version of an 8-chapter video.</p>
+                <p class="note">Honesty note: all data in the examples is synthetic and labeled as such. The commands and results really ran in a sandbox, but there is no real Splunk and no real VirusTotal; the hunt logic ran as equivalent Python code, and the VirusTotal page is an illustration. No real hash from a real campaign is shown as a detection; only counts are cited.</p>
+                <nav class="toc" dir="ltr"><strong>Contents</strong><ol><li><a href="#ch1">Chapter 1: From the vendor blog to the SIEM</a></li><li><a href="#ch2">Chapter 2: Hash basics</a></li><li><a href="#ch3">Chapter 3: Hashes in the logs</a></li><li><a href="#ch4">Chapter 4: imphash and fuzzy hashing</a></li><li><a href="#ch5">Chapter 5: The intel side</a></li><li><a href="#ch6">Chapter 6: The hunt in the SIEM</a></li><li><a href="#ch7">Chapter 7: Correlation: Unit 42 + ShadowCloud</a></li><li><a href="#ch8">Chapter 8: The lab idea</a></li></ol></nav>
+                <h2 id="ch1">Chapter 1: From the vendor blog to the SIEM</h2>
+<h3 id="ch1_01">Hashing in real security work</h3>
+<p>Welcome. In this video we talk about the hash, but not the way you meet it in a cryptography textbook. We look at it the way it is used in real SOC work: from the moment a vendor publishes a report, to the moment the alert reaches the analyst, to the point where you build a lab of your own from all of it. The video is long and split into chapters, so take your time. There are examples that run on screen.</p>
+<p dir="ltr"><strong>Hashing in Production</strong></p>
+<p>From the vendor report to the SIEM to the lab</p>
+<h3 id="ch1_02">The vendor blog</h3>
+<p>Start with the big picture. A vendor such as Mandiant or CrowdStrike, or any threat intel team, publishes a blog about a new campaign. Inside it you find the TTPs, meaning the techniques the attacker used, and the IOCs: domains, IP addresses and, the most important item for us today, the hashes of files.</p>
+<p dir="ltr"><strong>Vendor blog (campaign report)  →  TTPs (behaviors)  →  IOCs domains · IPs · file hashes</strong></p>
+<h3 id="ch1_03">The threat intel team</h3>
+<p>The threat intel team takes these IOCs and cleans them. It removes duplicates and records next to each one the source, the confidence and the expiry date. Then they go into a shared list. It can be a simple CSV, STIX, or a platform such as MISP. This matters, because an IOC without context turns into noise after a few months.</p>
+<p dir="ltr"><strong>IOC extraction  →  De-duplicate  →  Add source · confidence · expiry  →  CSV / STIX / MISP</strong></p>
+<h3 id="ch1_04">From the list to the SIEM</h3>
+<p>Next comes the detection engineer. They load the list into the SIEM as a lookup, a table that events are compared against. Then comes the threat hunter, who searches current data with the list, and old data too. If there is a match, the incident response team starts to scope it: how many machines, and where did it begin.</p>
+<figure class="figure"><img src="assets/hashing/f_pipeline.png" alt="f_pipeline" loading="lazy"></figure>
+<figure class="figure"><img src="assets/hashing/ioc_pipeline.gif" alt="animation" loading="lazy"><figcaption>Animation</figcaption></figure>
+<h3 id="ch1_05">A hash is an identity, not a verdict</h3>
+<p>An important point from the start: a hash is the identity of an exact file, not a verdict on it. If a hash matches a known IOC, it tells you this is the same file that was seen in the campaign. It does not tell you the machine is compromised. Context does that: who ran the file, from which path, with which command line, and what it connected to afterwards.</p>
+<p dir="ltr"><strong>Hash = identity of exact bytes</strong></p>
+<p>Context says: who ran it? From which path? What did it connect to?</p>
+<h3 id="ch1_06">Pyramid of Pain</h3>
+<p>To set our expectations: David Bianco, in his well known Pyramid of Pain talk, described hash values as the indicators with the highest confidence but very sensitive to change, even by accident. If the attacker changes one byte, the whole hash changes. We return to this in chapter 4 and look at the alternatives that last longer.</p>
+<figure class="figure"><img src="assets/hashing/f_pyramid.png" alt="f_pyramid" loading="lazy"></figure>
+<p class="refline">References: <a href="#ref1">[1]</a> D. Bianco, "The Pyramid of Pain" (SpeakerDeck) - <a href="https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations" target="_blank" rel="noopener">https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations</a></p>
+<h3 id="ch1_07">Video map</h3>
+<p>The map of the video. Chapter 2: hash basics in the terminal. Chapter 3: where hashes show up in logs. Chapter 4: types beyond the plain hash, and why an attacker defeats it. Chapter 5: the intel side. Chapter 6: the hunter side in the SIEM. Chapter 7: a full case study on a recent real campaign, and how to correlate vendor reports. Chapter 8: how to turn all of it into a new lab that you can publish on Hack The Box or any platform.</p>
+<ul><li>2 · Hash basics in the terminal</li><li>3 · Hashes in the logs</li><li>4 · Beyond the plain hash</li><li>5 · The intel side</li><li>6 · The hunter side in the SIEM</li><li>7 · Case study: a recent campaign</li><li>8 · From correlation to a lab</li></ul>
+<h2 id="ch2">Chapter 2: Hash basics</h2>
+<h3 id="ch2_01">Hash basics in the terminal</h3>
+<p>We start with the basics, in the terminal. We create a simple text file and compute its hash. The commands really run in the sandbox, and the file is a harmless test file. The first command is sha256sum on the file.</p>
+<span class="badge badge-active">Sandbox terminal · harmless demo file</span>
+<pre dir="ltr"><code>$ echo "invoice_2026.txt demo" &gt; demo.txt
+$ cat demo.txt
+invoice_2026.txt demo
+$ sha256sum demo.txt</code></pre>
+<h3 id="ch2_02">What the output means</h3>
+<p>Look at the output: 64 hex characters. Every two characters are one byte, so 32 bytes, so 256 bits. That is SHA-256. If you run the command on the same file a million times you get exactly the same output. That means the hash is deterministic.</p>
+<span class="badge badge-active">Sandbox terminal · harmless demo file</span>
+<pre dir="ltr"><code>$ sha256sum demo.txt
+6d2b257dbc14f13f847be988f43ee4db7206f1f451d0f7f97789a8255cfdb9f2  demo.txt
+$ sha256sum demo.txt   # run it again
+6d2b257dbc14f13f847be988f43ee4db7206f1f451d0f7f97789a8255cfdb9f2  demo.txt
+# same input, same output: deterministic</code></pre>
+<h3 id="ch2_03">One character changed</h3>
+<p>Now we make a very small change. We add a period at the end of the file, one character only, and compute the hash again. Did it change? Completely. I measured it in the sandbox: out of 256 bits, 141 differ, which is close to half, and out of 64 hex characters, 63 differ. This is called the avalanche effect. A tiny change in the input changes the output so much that no similarity is left.</p>
+<span class="badge badge-active">Sandbox · measured</span>
+<figure class="figure"><img src="assets/hashing/f_avalanche.png" alt="f_avalanche" loading="lazy"></figure>
+<figure class="figure"><img src="assets/hashing/avalanche.gif" alt="animation" loading="lazy"><figcaption>Animation</figcaption></figure>
+<pre dir="ltr"><code>demo.txt  (…demo)
+  6d2b257dbc14f13f847be988f43ee4db7206f1f451d0f7f97789a8255cfdb9f2
+demo2.txt (…demo.)
+  7413ec07d8b92e40529d443e4715bd1a9e056053cfeeaadefeeb1b8eabac1aef</code></pre>
+<h3 id="ch2_04">Why this is useful</h3>
+<p>Why is this useful? Because a hash works as a fingerprint. If the hash matches, the two files have the same bytes. If even one character changes, you know immediately. And the hash is one-way: you cannot rebuild the file from the hash. So you can share a hash in a report without sharing the file itself.</p>
+<ul><li>Deterministic: same file, same hash</li><li>Fixed length whatever the file size</li><li>One-way: you cannot rebuild the file from the hash</li><li>Avalanche effect: a small change alters everything</li></ul>
+<h3 id="ch2_05">MD5, SHA-1 and SHA-256</h3>
+<p>Now we run the three well known algorithms on the same file. MD5 gives 32 characters, SHA-1 gives 40, and SHA-256 gives 64. They all turn any file size into a fixed-length value. The difference is that the older algorithms were broken as far as collisions go, and that is what we discuss next.</p>
+<span class="badge badge-active">Sandbox terminal · harmless demo file</span>
+<pre dir="ltr"><code>$ md5sum demo.txt
+cbcdf11c260d4a8561e3b77b3ee507f2  demo.txt
+$ sha1sum demo.txt
+01e8aff618223db63050fe1dd5a0de177d126d15  demo.txt
+$ sha256sum demo.txt
+6d2b257dbc14f13f847be988f43ee4db7206f1f451d0f7f97789a8255cfdb9f2  demo.txt</code></pre>
+<h3 id="ch2_06">Why SHA-1 is retired</h3>
+<p>In February 2017 a team from CWI in Amsterdam and Google announced the first SHA-1 collision, meaning two different files with the same hash. According to Google's blog, the attack needed about nine quintillion SHA-1 computations, yet it is still more than a hundred thousand times faster than brute force. NIST had already stopped allowing SHA-1 for digital signatures at the end of 2013, had deprecated it in 2011, and advised moving to SHA-2 or SHA-3.</p>
+<figure class="figure"><img src="assets/hashing/f_sha1.png" alt="f_sha1" loading="lazy"></figure>
+<p class="refline">References: <a href="#ref2">[2]</a> Google Online Security Blog, "Announcing the first SHA-1 collision" (2017-02-23) - <a href="https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html" target="_blank" rel="noopener">https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html</a><br><a href="#ref3">[3]</a> NIST CSRC, "Research results on SHA-1 collisions" (2017-02-24) - <a href="https://csrc.nist.gov/news/2017/research-results-on-sha-1-collisions" target="_blank" rel="noopener">https://csrc.nist.gov/news/2017/research-results-on-sha-1-collisions</a></p>
+<h3 id="ch2_07">What this means at work</h3>
+<p>So what does this mean at work? If an IOC comes only as MD5 or SHA-1, treat it as a first lead. Search with it, but confirm with something else: file name, path, signer, size or process behavior. And if you are the one building the list, prefer SHA-256. In chapter 7 we see that the recent Unit 42 report uses SHA-256.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>IOC comes as</th><th>Treat it as</th><th>Do</th></tr></thead><tbody><tr><td>MD5 or SHA-1 only</td><td>Initial lead</td><td>Search it, then confirm: name, path, signer, size, behavior</td></tr><tr><td>SHA-256</td><td>Stronger match</td><td>Still read the context before acting</td></tr><tr><td>Your own lists</td><td>Prefer SHA-256</td><td>Record the source and date</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch2_08">On Windows</h3>
+<p>On Windows, the matching command is Get-FileHash with the -Algorithm SHA256 option and the file name, and the output is exactly the same. You will need this command often, especially in forensics.</p>
+<span class="badge badge-active">REFERENCE: PowerShell syntax, not run in this sandbox</span>
+<pre dir="ltr"><code>$ Get-FileHash -Algorithm SHA256 .\demo.txt
+Algorithm       Hash
+---------       ----
+SHA256          6D2B257DBC14F13F847BE988F43EE4DB7206F1F451D0F7F97789A8255CFDB9F2</code></pre>
+<h3 id="ch2_09">Evidence handling habit</h3>
+<p>There is a habit that separates the professional from the rest. For any file or evidence you receive, compute its hash first, record it in the case notes, work on a copy, and leave the original untouched. That way you can show the original did not change, and be sure that what you analyzed is exactly what was collected. This is the difference between an analysis you can defend and one you cannot prove.</p>
+<p dir="ltr"><strong>Hash the evidence first  →  Record it in case notes  →  Work on a copy  →  Original stays untouched</strong></p>
+<h3 id="ch2_10">Summary of chapter 2</h3>
+<p>To sum up: a hash is a fast and exact fingerprint of one specific file. But it identifies the file, it does not judge it, and it changes with any edit. In the next chapter we see where these hashes appear in realistic logs.</p>
+<ul><li>An exact fingerprint of one specific file</li><li>It identifies the file, it does not judge it</li><li>Any edit changes it</li><li>Next chapter: hashes in the logs</li></ul>
+<h2 id="ch3">Chapter 3: Hashes in the logs</h2>
+<h3 id="ch3_01">Hashes in realistic data</h3>
+<p>Let us look at the hash in realistic-looking data. The data we use in this chapter and in chapter 6 is synthetic, generated by me: about five thousand Sysmon events across thirty-five machines. It is labeled synthetic on screen so nobody mistakes it for real data.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<p dir="ltr"><strong>5,003 events · 35 hosts</strong></p>
+<p>JSONL · all names and hashes are made up</p>
+<h3 id="ch3_02">Sysmon Event ID 1: process creation</h3>
+<p>This is Sysmon Event ID 1, process creation. The event records the Image, which is the file path, the CommandLine, the ParentImage, meaning who started the process, and also the Hashes of the process file. According to Microsoft's documentation, Sysmon computes SHA1 by default, and you can choose MD5, SHA256 or IMPHASH, or all of them.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<pre dir="ltr"><code>$ head -1 sysmon_synth.jsonl | python3 -m json.tool
+{
+ "_time": "2026-10-20T08:00:00Z",
+ "host": "WS-014",
+ "user": "user9",
+ "EventCode": 1,
+ "Image": "C:\\Program Files\\Teams\\Teams.exe",
+ "ParentImage": "C:\\Windows\\explorer.exe",
+ "CommandLine": "Teams.exe",
+ "Hashes": "SHA256=169AA62AAFE0F3ED153CC37289C83784E0DC3380386230A6612B15C6E18957FF,IMPHASH=052DEAA50B705F7EFCFC77249D7FD6F8",
+ "ProcessGuid": "{d1f409db03ca4093}"
+}</code></pre>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch3_03">What does your config log?</h3>
+<p>Here is the first question in any hunt: what does your config record? If it was left at the default, your logs hold SHA1 only, and you come with an IOC list that is all SHA-256. You search, find nothing, and the truth is that you are comparing two different things. The suggested setting here is HashAlgorithms set to SHA256 and IMPHASH.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Per Microsoft docs</th><th>Value</th></tr></thead><tbody><tr><td>Process-image hashes</td><td>SHA1 (the default), MD5, SHA256 or IMPHASH</td></tr><tr><td>HashAlgorithms option</td><td>MD5, SHA1, SHA256, IMPHASH, or * for all</td></tr><tr><td>Your IOC list is SHA-256 but logs only have SHA1</td><td>No match, and no error</td></tr><tr><td>Suggested here</td><td>HashAlgorithms = SHA256 + IMPHASH</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch3_04">ProcessGUID</h3>
+<p>There is another important field called ProcessGUID. It is a unique value for one process, and it is very useful for linking events. You can say: this process, which processes came out of it, which network connections did it make, and which registry keys did it write. We use it in practice in chapter 6.</p>
+<p dir="ltr"><strong>Process (Event 1)  →  Child processes  →  Network (Event 3, TCP/UDP)  →  Registry (Event 13)</strong></p>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch3_05">Different sources, different field names</h3>
+<p>The same file can show up in more than one source. In the EDR as a file-write event, in the email gateway as an attachment, in the proxy as a download, and in Sysmon as a process. The problem is that each source names the field differently. This one says Hashes, that one SHA256, another file_hash, another attachment_sha256. The format of the value differs too: it can be upper or lower case, and it may have the algorithm name in front.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<figure class="figure"><img src="assets/hashing/f_norm.png" alt="f_norm" loading="lazy"></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Source</th><th>Field name</th><th>Value shape</th></tr></thead><tbody><tr><td>Sysmon</td><td>Hashes</td><td>SHA256=6D2B…,IMPHASH=…</td></tr><tr><td>EDR file-write</td><td>SHA256</td><td>upper case</td></tr><tr><td>Mail gateway</td><td>attachment_sha256</td><td>lower case</td></tr><tr><td>Proxy</td><td>file_hash</td><td>plain hex</td></tr></tbody></table></div>
+<h3 id="ch3_06">Normalization</h3>
+<p>The detection engineer's job here is normalization: one field name, lower case, and a value without a prefix. Then any IOC you search for is searched in the one normalized field across all sources at once. Without this step you miss matches, and the problem is that you do not know you missed them.</p>
+<ul><li>One normalized field name: sha256</li><li>Lower case</li><li>Value without prefix</li><li>One search across all sources</li><li>Without this: the match is missed and you never know</li></ul>
+<h3 id="ch3_07">Limits of the hash</h3>
+<p>There is a limit we must state honestly. A hash is computed on a file. If execution happens only in memory, or the file is deleted before anyone hashes it, you will not find a hash at all. So the hash is a useful tool, not a complete safety net, and that is why the next chapters cover what comes after it.</p>
+<ul><li>A hash is computed on a file</li><li>In-memory execution only = no hash</li><li>File deleted before anyone hashed it = no hash</li><li>A useful tool, not a complete safety net</li></ul>
+<h2 id="ch4">Chapter 4: imphash and fuzzy hashing</h2>
+<h3 id="ch4_01">The hash is easy to change</h3>
+<p>Today we say the hash is easy to change. Let us see it in numbers. Here is a synthetic file, and we made two copies. In the first we changed only fifteen characters out of three thousand words, and in the second we changed 300 characters. There is also a third, unrelated file. We compute SHA-256 for each: the four values are completely different.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>File</th><th>Change</th><th>SHA-256 (first 24 hex)</th></tr></thead><tbody><tr><td>base</td><td>—</td><td>8c386643cf50532032dcce89…</td></tr><tr><td>variant A</td><td>15 chars edited</td><td>b09a9a9cc859d039c4f2ab16…</td></tr><tr><td>variant B</td><td>300 chars edited</td><td>fb997577a03dca70cd99d49f…</td></tr><tr><td>unrelated</td><td>—</td><td>a472c477d609cffea818ab4a…</td></tr></tbody></table></div>
+<h3 id="ch4_02">What Bianco said</h3>
+<p>This is exactly what David Bianco said in the Pyramid of Pain: hashes are the highest-confidence indicators, but sensitive to change, even by accident. In practice it means that if the attacker recompiles or adds a byte, the old IOC stops matching even a near copy.</p>
+<p dir="ltr"><strong>Hashes: highest confidence</strong></p>
+<p>But very sensitive to change, even by accident</p>
+<p class="refline">References: <a href="#ref1">[1]</a> D. Bianco, "The Pyramid of Pain" (SpeakerDeck) - <a href="https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations" target="_blank" rel="noopener">https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations</a></p>
+<h3 id="ch4_03">imphash</h3>
+<p>That is why other types appeared. The first is imphash. Mandiant explained it in an early article: a hash is computed from the names of the libraries and APIs the file imports, in order. The order of the imports comes from the order of the code at link time, so samples from the same family often share the same value. Mandiant used it to track the backdoors each group prefers.</p>
+<p dir="ltr"><strong>PE import table (DLL + API names, in order)  →  Hash of that list  →  imphash (related samples often share it)</strong></p>
+<p class="refline">References: <a href="#ref6">[6]</a> Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></p>
+<h3 id="ch4_04">The Mandiant example</h3>
+<p>To see that it is not magic, the same Mandiant article has an example: a simple piece of code was compiled and gave an imphash, then the order of two functions in the code was changed and the imphash came out completely different. Both values are on screen from the article itself. So an attacker who knows the idea can reorder the code and get past the imphash.</p>
+<pre dir="ltr"><code>Original source order
+  0c6803c4e922103c4dca5963aad36ddf
+Two functions reordered
+  b8bb385806b89680e13fc0cf24f4431e</code></pre>
+<p class="refline">References: <a href="#ref6">[6]</a> Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></p>
+<h3 id="ch4_05">imphash on my machine</h3>
+<p>Here is a live example on my machine: these are benign PE files that ship with the pip tool, and we compute imphash for them with the pefile library. Notice that each file has a different value. The point is the method of computing, not that these are malware samples. VirusTotal also added imphash in 2014, after Mandiant wrote about it.</p>
+<span class="badge badge-active">Benign PE files · pefile · method demo only</span>
+<pre dir="ltr"><code>$ python3 -c "import pefile;print(pefile.PE(f).get_imphash())"   # f = benign pip launcher stubs
+t32.exe  imphash 5e24f42b46c247f13d78f0f21a4a2bf7
+t64.exe  imphash c51d659b4b1142d4af3795d09f1d63f7
+w32.exe  imphash af457a899dff0be8f96c758b66fd5f37</code></pre>
+<p class="refline">References: <a href="#ref7">[7]</a> VirusTotal blog, "VirusTotal imphash" (2014) - <a href="https://blog.virustotal.com/2014/02/virustotal-imphash.html" target="_blank" rel="noopener">https://blog.virustotal.com/2014/02/virustotal-imphash.html</a><br><a href="#ref6">[6]</a> Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></p>
+<h3 id="ch4_06">Fuzzy hashes</h3>
+<p>The third type is fuzzy hashes, such as ssdeep and TLSH. They do not say whether it is the same file or not. They say how similar two files are. TLSH gives you a distance between two files: the lower the number, the more alike the files. According to the TLSH documentation, it really is a distance metric, and that is what makes it fast to find the nearest items in large data.</p>
+<ul><li>ssdeep and TLSH: how similar are the two files?</li><li>TLSH gives a distance: lower = more alike</li><li>TLSH is a distance metric: fast search in large data</li></ul>
+<p class="refline">References: <a href="#ref8">[8]</a> TLSH, papers and technical overview - <a href="https://tlsh.org/papers.html" target="_blank" rel="noopener">https://tlsh.org/papers.html</a></p>
+<h3 id="ch4_07">TLSH on the synthetic files</h3>
+<p>I tried it on the same synthetic files with the real TLSH library. The copy with 15 characters changed came out at distance 5 from the original. The copy with 300 characters changed came out at distance 7. The unrelated file came out at distance 44. So the same family is very close, and the stranger is clearly far, even though the SHA-256 of all four is completely different.</p>
+<span class="badge badge-active">SYNTHETIC DATA · real TLSH library</span>
+<figure class="figure"><img src="assets/hashing/f_tlsh.png" alt="f_tlsh" loading="lazy"></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>File</th><th>Change</th><th>TLSH distance</th></tr></thead><tbody><tr><td>base</td><td>—</td><td>0</td></tr><tr><td>variant A</td><td>15 chars edited</td><td>5</td></tr><tr><td>variant B</td><td>300 chars edited</td><td>7</td></tr><tr><td>unrelated</td><td>—</td><td>44</td></tr></tbody></table></div>
+<p>Synthetic numbers: an example of the idea, not thresholds to apply to real samples</p>
+<h3 id="ch4_08">Limits of fuzzy hashes</h3>
+<p>But note: this is synthetic data, and these numbers illustrate the idea, they are not thresholds to apply to real samples. There is also a paper on the TLSH site that tests how fuzzy hashes can be attacked with deliberate changes to a file. So even these are not a guarantee.</p>
+<ul><li>These numbers are synthetic: an example, not thresholds</li><li>A paper tests how fuzzy hashes can be attacked with deliberate changes</li><li>Even these are not a guarantee</li></ul>
+<p class="refline">References: <a href="#ref8">[8]</a> TLSH, papers and technical overview - <a href="https://tlsh.org/papers.html" target="_blank" rel="noopener">https://tlsh.org/papers.html</a></p>
+<h3 id="ch4_09">Use each one where it fits</h3>
+<p>So use each type where it fits. Exact SHA-256: for fast blocking and for retro-hunting in old data. imphash and fuzzy hashes: for grouping samples into a family and tracking it. Detection on behavior and TTPs: what lasts when all of this changes. A good analyst never builds a detection on a hash alone.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Tool</th><th>Best for</th></tr></thead><tbody><tr><td>Exact SHA-256</td><td>Quick block, retro-hunt in old data</td></tr><tr><td>imphash / fuzzy hashes</td><td>Cluster samples, track a family</td></tr><tr><td>Behavior / TTP detections</td><td>What lasts when everything else changes</td></tr></tbody></table></div>
+<h2 id="ch5">Chapter 5: The intel side</h2>
+<h3 id="ch5_01">Where IOCs come from</h3>
+<p>Now the intel side: the people who produce the IOCs, and how they are read. Any decent vendor report ends with an Indicators of Compromise section. In the recent Unit 42 report you find this section grouped by SHA-256 per malware name and variant. The Kaspersky report groups them by component: loader, payload, backdoor. This organization matters, because you can tell which part of the chain each hash belongs to.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Report (read)</th><th>Hash type</th><th>Grouped by</th><th>Count in page text</th></tr></thead><tbody><tr><td>Unit 42, TGR-STA-0049 (Nov 16, 2026)</td><td>SHA-256</td><td>Malware variant</td><td>66 unique</td></tr><tr><td>Securelist, ShadowCloud (Nov 17, 2026)</td><td>MD5</td><td>Component (loaders, payload, backdoors...)</td><td>14 unique</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a><br><a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch5_02">IOCs with context</h3>
+<p>The analyst takes these IOCs from the sample itself: hashes, domains, IP addresses, file paths, mutex names. But more important than the value is the context you record next to it: source, first seen, confidence and expiry. An IOC without context becomes noise after two months. On screen is a synthetic CSV table with these columns.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>sha256</th><th>source</th><th>confidence</th><th>added</th><th>expires</th></tr></thead><tbody><tr><td>034f79fa067ff7…</td><td>SYNTHETIC-feed</td><td>high</td><td>2026-11-17</td><td>2027-02-17</td></tr><tr><td>170c5f7b315edf…</td><td>SYNTHETIC-feed</td><td>high</td><td>2026-11-17</td><td>2027-02-17</td></tr><tr><td>771a386f146804…</td><td>SYNTHETIC-feed</td><td>low</td><td>2026-11-17</td><td>2027-02-17</td></tr><tr><td>33be69b8e58373…</td><td>SYNTHETIC-feed</td><td>medium</td><td>2026-11-17</td><td>2027-02-17</td></tr></tbody></table></div>
+<h3 id="ch5_03">CSV and MISP attribute</h3>
+<p>IOCs are shared in more than one format. Simple CSV, STIX, or a platform such as MISP. The MISP documentation describes the core format as simple JSON for exchanging events and attributes. Attributes have types, including sha256, and filename|sha256 in one value. On screen is our same row turned into a simplified attribute form, to make the picture clear.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<pre dir="ltr"><code>$ head -3 data/ioc_hashes.csv | cut -c1-90
+sha256,source,confidence,added
+034f79fa067ff77b8182ddd1980c24bd2907baa9edf3148658ab7a9eecb52e98,SYNTHETIC-feed,high,2026-11-17
+170c5f7b315edf75cff5d8d8b7111125924fc70e92d61193454ba1096d9ee676,SYNTHETIC-feed,high,2026-11-17
+
+# simplified, MISP-style attribute (SYNTHETIC)
+{"type": "sha256",
+ "value": "034f79fa067ff77b8182...",
+ "comment": "SYNTHETIC-feed, confidence high"}</code></pre>
+<p class="refline">References: <a href="#ref10">[10]</a> MISP data models - <a href="https://www.misp-project.org/datamodels/" target="_blank" rel="noopener">https://www.misp-project.org/datamodels/</a></p>
+<h3 id="ch5_04">VirusTotal file page (illustration)</h3>
+<p>VirusTotal is one of the best-known places to look up a hash. The page on screen is labeled mock-up, meaning I drew it, it is not a real page. It has the familiar tabs: Detection, Details, Relations, Behavior and Community. You can search with an MD5, SHA-1 or SHA-256, and they all work in the search box according to their documentation.</p>
+<span class="badge badge-active">MOCK-UP drawn by me, not a real VirusTotal page</span>
+<figure class="figure"><img src="assets/hashing/f_vt.png" alt="f_vt" loading="lazy"></figure>
+<p dir="ltr"><strong>Detection  →  Details  →  Relations  →  Behavior  →  Community</strong></p>
+<p class="refline">References: <a href="#ref11">[11]</a> VirusTotal docs, VirusTotal Intelligence introduction - <a href="https://docs.virustotal.com/docs/virustotal-intelligence-introduction" target="_blank" rel="noopener">https://docs.virustotal.com/docs/virustotal-intelligence-introduction</a></p>
+<h3 id="ch5_05">The Community tab</h3>
+<p>The Community tab matters. On every file or URL there is a comments section. VirusTotal encourages users to review samples and comment, because it helps others. There are also agreed tags so comments can be searched in a uniform way. And there is a reputation system from minus one hundred, completely malicious, to one hundred, completely benign. But note: these comments are people's opinions. Treat them as a lead, not as a fact.</p>
+<ul><li>Comments on every file or URL</li><li>Agreed tags for searching</li><li>Reputation: from -100 (malicious) to 100 (benign)</li><li>People's opinion: treat it as a lead</li></ul>
+<p class="refline">References: <a href="#ref12">[12]</a> VirusTotal docs, Comments - <a href="https://docs.virustotal.com/docs/comments" target="_blank" rel="noopener">https://docs.virustotal.com/docs/comments</a></p>
+<h3 id="ch5_06">Advanced search</h3>
+<p>There are also advanced search tools. In the VirusTotal documentation of file search modifiers there is a modifier called imphash that returns all PE files with the same import hash, and ssdeep for similar files. They help when you have one hash and want to find its siblings. And the mere presence of these modifiers in the documentation does not tell you they are available on every account. Check what you are entitled to.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Modifier</th><th>Applies to</th><th>What it returns</th></tr></thead><tbody><tr><td>imphash:</td><td>PE files</td><td>Files with the given import hash (same family candidates)</td></tr><tr><td>ssdeep:</td><td>Any file type</td><td>Files similar to the given ssdeep hash</td></tr></tbody></table></div>
+<p>Present in the documentation does not mean available on every account. Check your entitlements.</p>
+<p class="refline">References: <a href="#ref13">[13]</a> VirusTotal docs, File search modifiers - <a href="https://docs.virustotal.com/docs/file-search-modifiers" target="_blank" rel="noopener">https://docs.virustotal.com/docs/file-search-modifiers</a></p>
+<h3 id="ch5_07">Privacy warning</h3>
+<p>This is an important work warning, from the VirusTotal documentation itself: any IoC you submit or ask about from the interface gets added to the dataset and becomes available to the community. So do not submit anything with sensitive or personal data. A company-internal file should not be uploaded. A hash on its own is usually much lighter, but check your company policy before you ask about anything from a real incident.</p>
+<span class="badge badge-active">WARNING</span>
+<p dir="ltr"><strong>Do not submit sensitive data</strong></p>
+<p>Any IoC submitted from the interface is added to the dataset and is available to the community</p>
+<p class="refline">References: <a href="#ref11">[11]</a> VirusTotal docs, VirusTotal Intelligence introduction - <a href="https://docs.virustotal.com/docs/virustotal-intelligence-introduction" target="_blank" rel="noopener">https://docs.virustotal.com/docs/virustotal-intelligence-introduction</a></p>
+<h3 id="ch5_08">MalwareBazaar</h3>
+<p>Another free and useful source: MalwareBazaar from abuse.ch. It is a project that shares malware samples with the security community, AV vendors and threat intel providers. The API needs an Auth-Key, which you get free from auth.abuse.ch. Alongside it are other sources such as open feeds that publish IOCs.</p>
+<ul><li>Shares malware samples with the community, AV vendors and CTI providers</li><li>The API needs an Auth-Key</li><li>The Auth-Key is free from auth.abuse.ch</li></ul>
+<p class="refline">References: <a href="#ref14">[14]</a> abuse.ch, MalwareBazaar (GitHub) - <a href="https://github.com/abusech/MalwareBazaar/" target="_blank" rel="noopener">https://github.com/abusech/MalwareBazaar/</a></p>
+<h3 id="ch5_09">Golden rules</h3>
+<p>A golden rule in intel: do not trust a single source. Confirm with at least two. Record the provenance, meaning who said what and when. Add confidence. Add expiry, because an IOC that is a year old is not like one that is a week old. And in chapter 7 we see that even vendors' own lists can contain things that should not be blocked.</p>
+<ul><li>Do not trust a single source</li><li>Record provenance: who said what and when</li><li>Add confidence</li><li>Add expiry</li></ul>
+<h2 id="ch6">Chapter 6: The hunt in the SIEM</h2>
+<h3 id="ch6_01">The IOC list as a lookup</h3>
+<p>We have reached the hunter side. We have an IOC list from the feed, synthetic of course. It has five hashes, with the source and the confidence next to each. We load it as a lookup and match it against five thousand Sysmon events. Notice that the screen says: SPL-style query, executed with equivalent Python logic, because Splunk itself is not available to me. The results you see are the output of a real run, not drawn.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<pre dir="ltr"><code>$ cut -c1-18,65- data/ioc_hashes.csv
+sha256,source,conf…d
+034f79fa067ff77b81…,SYNTHETIC-feed,high,2026-11-17
+170c5f7b315edf75cf…,SYNTHETIC-feed,high,2026-11-17
+771a386f1468040bfb…,SYNTHETIC-feed,low,2026-11-17
+33be69b8e58373d32e…,SYNTHETIC-feed,medium,2026-11-17
+0f7639d585cafecdaf…,SYNTHETIC-feed,medium,2026-11-17</code></pre>
+<h3 id="ch6_02">The query</h3>
+<p>The query does three things. First, it extracts the SHA256 from the Hashes field with a regex. Second, it turns it into lower case so it matches the lookup, which is exactly the normalization part from chapter 3. Third, it joins with the IOC list and returns only the matches.</p>
+<span class="badge badge-active">SPL-style · run by equivalent Python logic · SYNTHETIC</span>
+<pre dir="ltr"><code>SPL-style (executed here by equivalent Python logic):
+
+index=sysmon EventCode=1
+| rex field=Hashes "SHA256=(?&lt;sha256&gt;[A-Fa-f0-9]{64})"
+| eval sha256=lower(sha256)
+| lookup ioc_hashes sha256 OUTPUT source confidence
+| where isnotnull(source)</code></pre>
+<h3 id="ch6_03">638 match rows: what is this?</h3>
+<p>The result of the run: 638 matching rows. A big number, and surely not 638 intrusions. This is the first real lesson: the hunter does not look at the count, the hunter looks at the distribution. When I grouped the rows by hash I found two things: only two rows with high confidence, and 636 rows on one hash with low confidence, spread across all thirty-five machines.</p>
+<span class="badge badge-active">Real output of the equivalent logic · SYNTHETIC DATA</span>
+<figure class="figure"><img src="assets/hashing/f_dist.png" alt="f_dist" loading="lazy"></figure>
+<figure class="figure"><img src="assets/hashing/hunt_funnel.gif" alt="animation" loading="lazy"><figcaption>Animation</figcaption></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Group (by sha256)</th><th>Rows</th><th>Hosts</th><th>Confidence</th></tr></thead><tbody><tr><td>hash A: C:\Users\...\Temp\upd_svc.exe</td><td>1</td><td>1</td><td>high</td></tr><tr><td>hash B: C:\ProgramData\vmsync\vmsync.exe</td><td>1</td><td>1</td><td>high</td></tr><tr><td>hash C: C:\Program Files\AdminTools\remotehelp.exe</td><td>636</td><td>35</td><td>low</td></tr></tbody></table></div>
+<p>Do not look at the count. Look at the distribution.</p>
+<h3 id="ch6_04">The hash on every machine</h3>
+<p>The hash found on all thirty-five machines turned out to be remotehelp.exe, from Program Files, an internal admin tool in the synthetic data. So it is dual-use or a wrong entry in the feed. The decision here is not made on the hash alone: we look at the path, the parent, the command line, and whether this tool is known to us. Usually we make an exception for it, tell the feed owner, and lower its priority.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Check</th><th>Finding</th></tr></thead><tbody><tr><td>Path</td><td>C:\Program Files\AdminTools\ (not Temp/AppData)</td></tr><tr><td>Parent</td><td>services.exe</td></tr><tr><td>Known internal tool?</td><td>Yes (in this synthetic scenario)</td></tr><tr><td>Decision</td><td>Exception + tell the feed owner + lower priority</td></tr></tbody></table></div>
+<h3 id="ch6_05">The first row: WS-014</h3>
+<p>Back to the two high rows. The first: machine WS-014, user user7, file upd_svc.exe, running from AppData Local Temp, and its parent is Word. This is very worrying context, because Word should not launch an exe from Temp. The match told us what the file is, and the context told us it matters.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Time</td><td>2026-11-02 14:12:07Z</td></tr><tr><td>Host / user</td><td>WS-014 / user7</td></tr><tr><td>Image</td><td>C:\Users\user7\AppData\Local\Temp\upd_svc.exe</td></tr><tr><td>Parent</td><td>WINWORD.EXE</td></tr><tr><td>IOC confidence</td><td>high</td></tr></tbody></table></div>
+<h3 id="ch6_06">Pivot on ProcessGUID</h3>
+<p>We use the ProcessGUID to pivot. The processes that came out of upd_svc.exe: one cmd process running whoami with the all switch, about three minutes later. The network connections, Sysmon Event 3: two UDP connections on port 443 to address 198.51.100.23. That is an address from the range reserved for documentation, so not a real address. And UDP on 443 suggests QUIC, and we see in chapter 7 why that matters.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<pre dir="ltr"><code># pivot on ProcessGuid {a1b2c3d4e5f60718} (query logic run on the synthetic events)
+EID 1   cmd.exe /c whoami /all       (child, +3 min)
+EID 3   udp -&gt; 198.51.100.23:443   (198.51.100.0/24 = documentation range)
+EID 3   udp -&gt; 198.51.100.23:443   (198.51.100.0/24 = documentation range)
+EID 13  Updater -&gt; Run key  (persistence)</code></pre>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch6_07">The full chain</h3>
+<p>And the persistence: Sysmon Event 13, a write to a Run key in the registry named Updater, pointing to the same file in Temp. So we have a full chain: Word launched the file, the file asked for the user identity, connected out over UDP, and wrote itself into the Run key. That is far stronger than any hash match.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<figure class="figure"><img src="assets/hashing/f_chain.png" alt="f_chain" loading="lazy"></figure>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch6_08">The second row: SRV-03</h3>
+<p>The second row: machine SRV-03, account svc_backup, file vmsync.exe from ProgramData, and the parent is services.exe, so it runs as a service. This needs a different investigation: what is this service, who installed it, and is there a change ticket? Without more context we cannot say it is malicious, but it is at least a file with a high-confidence IOC.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Time</td><td>2026-11-09 03:40:00Z</td></tr><tr><td>Host / account</td><td>SRV-03 / svc_backup</td></tr><tr><td>Image</td><td>C:\ProgramData\vmsync\vmsync.exe</td></tr><tr><td>Parent</td><td>services.exe (runs as a service)</td></tr><tr><td>To ask</td><td>Who installed it? Is there a change ticket?</td></tr></tbody></table></div>
+<h3 id="ch6_09">Retro-hunt</h3>
+<p>And there is the retro-hunt. The IOC was added to the feed on November 17. But the activity on WS-014 was on November 2, fifteen days before. And the activity on SRV-03 was on November 9, eight days before. If we had searched only new data, we would have missed both. That is why a new IOC is also searched against old data.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<figure class="figure"><img src="assets/hashing/f_retro.png" alt="f_retro" loading="lazy"></figure>
+<h3 id="ch6_10">After the hunt</h3>
+<p>When you finish: you scope it, meaning how many machines and which users. You contain. You collect any new hashes or domains you found and send them back to intel, so the circle closes. And you write all of this with the confidence, what is confirmed and what is inference. That is the real hunter's work.</p>
+<p dir="ltr"><strong>Scope (hosts, users)  →  Containment  →  New hashes/domains back to intel  →  Write-up with confidence</strong></p>
+<h2 id="ch7">Chapter 7: Correlation: Unit 42 + ShadowCloud</h2>
+<h3 id="ch7_01">Case study: a recent campaign</h3>
+<p>Now the practical part: a case study on a recent campaign. We have two reports from two different vendors in the same week. The first is from Unit 42, published November 16, 2026, about a group they track as TGR-STA-0049, which has other names at other vendors: REF7707, Earth Alux and Ink Dragon. The second is from Kaspersky, published November 17, called Operation ShadowCloud. All the information you hear from these two reports has its source on screen, and we do not republish the real hashes, we only point to them.</p>
+<span class="badge badge-active">Public reports, cited · real hashes not re-hosted</span>
+<p dir="ltr"><strong>TGR-STA-0049 + Operation ShadowCloud</strong></p>
+<p>Unit 42 (Nov 16, 2026) and Kaspersky (Nov 17, 2026)</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a><br><a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_02">Who is this?</h3>
+<p>We start with who they are. TGR-STA-0049, according to Unit 42, has been active since at least March 2023, and targets governments in Southeast Asia, South America and Europe. Earlier it used a backdoor called Squidoor. In the latest campaign, from mid-2025, two new malware families appeared: the PerfectPioneer RAT, seen in July 2025, and its modular successor KUKURAT, seen since March 2026.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Fact (per Unit 42)</th><th>Value</th></tr></thead><tbody><tr><td>Also tracked as</td><td>REF7707, Earth Alux, Ink Dragon</td></tr><tr><td>Active since</td><td>At least March 2023</td></tr><tr><td>Targets</td><td>Government: SE Asia, South America, Europe</td></tr><tr><td>Earlier backdoor</td><td>Squidoor (FINALDRAFT)</td></tr><tr><td>Current campaign</td><td>PerfectPioneer RAT (Jul 2025), KUKURAT (Mar 2026)</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_03">Initial access</h3>
+<p>Getting into the network: according to Unit 42, the main route is exploiting unpatched Exchange and web servers and planting web shells, among them ASPXSpy, Godzilla and Suo5. The second route is phishing, with deceptive PDF files and domains that look like government sites. And that is the first lesson: the hash of any of these files will not protect you. What protects you is patching, and monitoring for web shells.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Vector</th><th>Details (per Unit 42)</th></tr></thead><tbody><tr><td>Primary</td><td>Exploit unpatched Exchange / web servers, drop web shells (ASPXSpy, Godzilla, Bysunue.aspx, Suo5)</td></tr><tr><td>Secondary</td><td>Phishing: decoy PDFs, look-alike government domains</td></tr></tbody></table></div>
+<p>The hash of one of these files will not protect you. Patching and monitoring will.</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_04">PerfectPioneer</h3>
+<p>On to the malware. PerfectPioneer is written in Go, and six variants were seen, with names such as newhttp3, PerfectRat and Pioneer. It is launched in three ways: DLL side-loading, meaning a legitimate modified file with a malicious DLL; a decoy installer that runs, for example, a GlobalProtect installer to cover the launch; or phishing with a file disguised with a PDF icon. It talks to the C2 over HTTP/3 and falls back to HTTP/2 if that fails.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Aspect</th><th>Per Unit 42</th></tr></thead><tbody><tr><td>Language</td><td>Go</td></tr><tr><td>Variants</td><td>Six: newhttp3, PerfectRat, Pioneer, RatAAkk-tt, rat_http3_ls, rat_http3_cc</td></tr><tr><td>Execution</td><td>DLL side-loading · decoy installers · phishing with PDF-icon executables</td></tr><tr><td>C2</td><td>HTTP/3, falls back to HTTP/2</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_05">The correlation point</h3>
+<p>There is a point that helps correlation in particular. Unit 42 says the URL endpoints used by PerfectPioneer, such as register, heartbeat, tasks and result, are the same ones KUKURAT used later, and that links the two families to one line of development. See the difference: the hashes changed completely between the two families, but the C2 behavior stayed the same. A live example of why tracking by behavior lasts longer than the hash.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>PerfectPioneer (newhttp3) C2 endpoint</th><th>Usage</th></tr></thead><tbody><tr><td>/agent/register</td><td>Register a new agent</td></tr><tr><td>/agent/heartbeat</td><td>Heartbeat to C2</td></tr><tr><td>/agent/tasks</td><td>Get tasks</td></tr><tr><td>/agent/result</td><td>Send task result</td></tr></tbody></table></div>
+<p>Unit 42: KUKURAT uses the same endpoints. The hashes changed, the behavior did not.</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_06">KUKURAT</h3>
+<p>KUKURAT is written in C++ and is a fully modular framework. Almost all its capabilities are loaded as DLL modules from the C2 directly into memory when needed, and it supports at least twelve modules. That means the main file itself does not contain the advanced capability code. This ties back to chapter 3: if a module is loaded only in memory and never written to disk, there is no file hash to compute. Here you need EDR and memory analysis, not only IOC lists.</p>
+<ul><li>C++ · fully modular</li><li>12+ DLL modules loaded from the C2 into memory</li><li>The main file has no advanced capability code</li><li>No write to disk = no file hash</li></ul>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_07">Camouflage</h3>
+<p>Among the things the report mentions: KUKURAT has a heuristic camouflage engine that generates normal-looking activity on three fronts: network, registry and files. It makes ten fake HTTP requests to well-known domains, writes, reads and deletes a Chrome-like key, and creates random temporary files in temp and deletes them right away. So part of what you see in the logs is deliberate noise.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Axis</th><th>Per Unit 42</th></tr></thead><tbody><tr><td>Network</td><td>10 decoy HTTP requests per cycle to a hard-coded list of 15 popular sites</td></tr><tr><td>Registry</td><td>Mimics Chrome browser activity (write, read back, delete)</td></tr><tr><td>Files</td><td>Random temp files created and deleted immediately</td></tr></tbody></table></div>
+<p>Part of what you see in the logs is deliberate noise.</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_08">Lateral movement and credentials</h3>
+<p>After it gets in: lateral movement. Unit 42 says the most prominent method is tampering with domain log-on scripts. After compromising the domain controller, it installs a malicious log-on script, so each user who logs in runs the script and downloads KUKURAT. It also uses PsExec, WMI and WinRM. It steals credentials by dumping LSASS through comsvcs.dll, by DCSync, and with tools such as Mimikatz, ProcDump and SharpDPAPI.</p>
+<p dir="ltr"><strong>Compromise the domain controller  →  Malicious log-on script  →  Runs when users log on  →  Downloads KUKURAT</strong></p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_09">Exfiltration</h3>
+<p>In exfiltration: PDF, DOCX, XLSX and PNG files, and it targets email as well. From an Exchange server it runs PowerShell commands that look for accounts with ApplicationImpersonation, and if it finds none, it loops over all mailboxes and gives a compromised account FullAccess. That is exactly what we can turn into a behavior detection.</p>
+<ul><li>PDF · DOCX · XLSX · PNG</li><li>Checks accounts with ApplicationImpersonation on Exchange</li><li>If none: FullAccess on all mailboxes in a loop</li><li>Turn it into a behavior detection</li></ul>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_10">Step 1 and 2: collect and extract</h3>
+<p>Now we put it together. Step one: collect. We gather all reports on the campaign and record the source, date and link. Step two: extract. The Unit 42 report has 66 SHA-256 values grouped by variant. The Kaspersky report has MD5 values grouped by component. We record them in one table: type, family, component, source, date, confidence.</p>
+<figure class="figure"><img src="assets/hashing/f_workflow.png" alt="f_workflow" loading="lazy"></figure>
+<p dir="ltr"><strong>1. Collect (sources + dates + URLs)  →  2. Extract 66 SHA-256 / 14 MD5  →  3. Normalize one table</strong></p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a><br><a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_11">Different hash types</h3>
+<p>A real problem here: SHA-256 in one report and MD5 in the other. You cannot join directly. The fix is to get the other hashes for these files from a source such as VirusTotal or MalwareBazaar and standardize on SHA-256. That needs an account and an API key, and the care we mentioned: do not send anything sensitive to public sources. And in this video I did not do this step on the real hashes.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Report</th><th>Hash type</th><th>Length</th></tr></thead><tbody><tr><td>Unit 42</td><td>SHA-256</td><td>64 hex chars</td></tr><tr><td>Securelist</td><td>MD5</td><td>32 hex chars</td></tr></tbody></table></div>
+<p>No direct join. Fix: enrich to SHA-256 from VirusTotal or MalwareBazaar. (Not done on the real hashes here.)</p>
+<h3 id="ch7_12">Step 3: overlap</h3>
+<p>Step three: overlap. We compare the two reports. Both target governments in Asia. Both use DLL side-loading. But the way in differs: Unit 42 says Exchange exploitation and web shells, and Kaspersky says the entry point is not known exactly. The C2 differs too: HTTP/3 in one, and SharePoint, GitHub and Ably in the other. And from what I read, no shared IOC is mentioned between the two reports, and neither report says the two campaigns are the same actor.</p>
+<figure class="figure"><img src="assets/hashing/f_venn.png" alt="f_venn" loading="lazy"></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th></th><th>Unit 42</th><th>Securelist</th></tr></thead><tbody><tr><td>Targets</td><td>Gov: SE Asia (+ S. America, Europe)</td><td>Asia and Africa, mostly gov</td></tr><tr><td>DLL side-loading</td><td>Yes</td><td>Yes (start.exe, javaw.exe, pythonw.exe + loaders)</td></tr><tr><td>C2</td><td>HTTP/3 (QUIC)</td><td>SharePoint, GitHub, Ably</td></tr><tr><td>Entry</td><td>Exchange exploits, phishing</td><td>Unknown (MeshAgent)</td></tr><tr><td>Shared IOCs stated</td><td>None</td><td>None</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a><br><a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_13">The honest conclusion</h3>
+<p>Kaspersky says the second part of its report will examine indications of links to Chinese-speaking groups. So the honest conclusion: similar tradecraft, not proof that they are the same party. A good analyst writes the confidence, and writes what is missing to raise it: for example, confirmed overlap in infrastructure, in code or in project names.</p>
+<ul><li>Similar tradecraft</li><li>Not proof that they are the same party</li><li>Kaspersky: part 2 will examine links to Chinese-speaking groups</li><li>Write the confidence and what is missing</li></ul>
+<p class="refline">References: <a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_14">Legitimate files in IOC lists</h3>
+<p>An important point about IOC lists: Kaspersky's list has a section called Legitimate executables, meaning hashes of benign files such as Sandboxie start.exe, Java and Python, which the attacker used for side-loading. If you put these hashes in a blocklist you will stop legitimate programs. So every IOC must be read in context, not just copied.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Securelist section: "Legitimate executables"</th><th>Why it is there</th></tr></thead><tbody><tr><td>javaw.exe (OpenJDK)</td><td>Used for DLL side-loading</td></tr><tr><td>start.exe (Sandboxie)</td><td>Used for DLL side-loading</td></tr><tr><td>pythonw.exe (Python)</td><td>Used for DLL side-loading</td></tr></tbody></table></div>
+<p>If you put them in a blocklist you will stop legitimate programs.</p>
+<p class="refline">References: <a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_15">Step 4: MITRE ATT&amp;CK</h3>
+<p>Step four: map to MITRE ATT&amp;CK, by tactic names. Web shells on Exchange: Initial Access and Persistence. DLL side-loading: Defense Evasion. Log-on scripts, PsExec, WMI and WinRM: Lateral Movement. LSASS dump and DCSync: Credential Access. The Exchange mailbox commands: Collection. And C2 over HTTP/3: Command and Control. Here I give tactic names only and do not write technique IDs, because I did not verify them.</p>
+<figure class="figure"><img src="assets/hashing/f_tactics.png" alt="f_tactics" loading="lazy"></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Behavior (Unit 42)</th><th>Tactic</th></tr></thead><tbody><tr><td>Web shells on Exchange</td><td>Initial Access / Persistence</td></tr><tr><td>DLL side-loading</td><td>Defense Evasion</td></tr><tr><td>Log-on scripts, PsExec, WMI, WinRM</td><td>Lateral Movement</td></tr><tr><td>LSASS dump, DCSync</td><td>Credential Access</td></tr><tr><td>Exchange mailbox permissions</td><td>Collection</td></tr><tr><td>C2 over HTTP/3</td><td>Command and Control</td></tr></tbody></table></div>
+<p>Technique IDs not shown: I did not verify them.</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_16">Step 5: detections that do not rely on a hash</h3>
+<p>Step five: turn this into detections that do not rely on a hash. For example rundll32 with comsvcs.dll against lsass. UDP on port 443 leaving a server that has no reason to use QUIC, and Unit 42 says some older firewalls do not inspect UDP the way they inspect TCP. A change in log-on scripts on the domain controller. Exchange commands that look for ApplicationImpersonation or run Add-MailboxPermission in a loop. And a benign-looking file loading a DLL from an unexpected path.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Idea</th><th>Source</th></tr></thead><tbody><tr><td>rundll32 + comsvcs.dll against lsass</td><td>Unit 42</td></tr><tr><td>UDP/443 outbound from a server with no reason for QUIC</td><td>Unit 42</td></tr><tr><td>New or changed log-on scripts on a DC</td><td>Unit 42</td></tr><tr><td>Exchange: ApplicationImpersonation checks, Add-MailboxPermission loop</td><td>Unit 42</td></tr><tr><td>Signed binary loading a DLL from an unexpected path</td><td>Unit 42 / Securelist</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_17">Step 6: write down confidence and gaps</h3>
+<p>The last step: write the confidence and your gaps. What is confirmed by the reports? What is your inference? What needs another source? That is what makes your portfolio write-up look like a real analyst's work, not just copy and paste from vendor reports.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Confirmed in reports</th><th>My inference</th><th>Needs another source</th></tr></thead><tbody><tr><td>Both target Asian governments; both use DLL side-loading</td><td>Similar tradecraft</td><td>Shared infrastructure / code</td></tr><tr><td>No shared IOCs stated</td><td>Not proven same actor</td><td>Securelist part 2 attribution analysis</td></tr></tbody></table></div>
+<h2 id="ch8">Chapter 8: The lab idea</h2>
+<h3 id="ch8_01">From the work to a lab</h3>
+<p>Now we turn what we did into a new lab idea that you can publish on Hack The Box, CyberDefenders or any platform, or put in your portfolio. First rule: the lab contains no real malware and no real hashes from the campaign. We build a scenario inspired by the techniques, with synthetic data. That avoids any risk and lets you publish it freely.</p>
+<span class="badge badge-active">LAB DESIGN · all data synthetic</span>
+<p dir="ltr"><strong>Public report → synthetic scenario</strong></p>
+<p>No real malware and no real hashes from the campaign</p>
+<h3 id="ch8_02">Scenario: Quiet Corridor</h3>
+<p>The scenario name: Quiet Corridor. The story: a fictional ministry with an unpatched Exchange server. The attacker plants a web shell, then a benign-looking file loads a DLL from the wrong place, an LSASS dump, a log-on script on the domain controller, and odd UDP connections on 443. These techniques come from the Unit 42 and Kaspersky reports, but all the data and names are made up.</p>
+<figure class="figure"><img src="assets/hashing/f_lab.png" alt="f_lab" loading="lazy"></figure>
+<h3 id="ch8_03">Artifacts to generate</h3>
+<p>The artifacts you generate: Sysmon logs as JSONL, Windows Security events, the Exchange PowerShell log, a Zeek-style network log with UDP connections on 443, and an IOC list of generated SHA-256 values, one of which is the hash of a benign file. This is exactly what I did in chapter 6, but at larger scale.</p>
+<ul><li>Sysmon JSONL</li><li>Windows Security events</li><li>Exchange PowerShell log</li><li>Zeek-style network log with odd UDP/443</li><li>IOC list of generated SHA-256 values, one of them a benign file</li></ul>
+<h3 id="ch8_04">Lab questions</h3>
+<p>The lab questions, each tied to a chapter of the video. Question one: which machine did execution start on, and what was the parent? Two: which SHA-256 from the IOC list actually appears in the data? Three: why must one specific hash in the list not be blocked? Four: which machine sent UDP on 443 for no reason? Five: which log-on script changed, and who changed it? Six: what is the ATT&amp;CK mapping of the stages? And seven: write a clean IOC list with confidence.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>#</th><th>Question</th><th>Chapter skill</th></tr></thead><tbody><tr><td>1</td><td>Which host started execution, and what was the parent?</td><td>6</td></tr><tr><td>2</td><td>Which SHA-256 from the IOC list is in the data?</td><td>3, 6</td></tr><tr><td>3</td><td>Why must one listed hash not be blocked?</td><td>7</td></tr><tr><td>4</td><td>Which host sent UDP/443 for no reason?</td><td>7</td></tr><tr><td>5</td><td>Which log-on script changed, and who changed it?</td><td>7</td></tr><tr><td>6</td><td>Map the stages to ATT&amp;CK tactics</td><td>7</td></tr><tr><td>7</td><td>Write a clean IOC list with confidence</td><td>5</td></tr></tbody></table></div>
+<h3 id="ch8_05">The build kit</h3>
+<p>The lab build kit: first, a generator script that produces the logs and hashes, like the one I used in the video. Second, Docker with Splunk or Elastic if you have it, or JSONL files analyzed with Python. Third, an answer key and write-up. And fourth, a README with all the references. And make the IOC list in MISP attribute format, so it looks professional.</p>
+<ul><li>Generator script for logs and hashes</li><li>Docker with Splunk/Elastic, or JSONL + Python</li><li>Answer key and write-up</li><li>README with references · IOC list in MISP format</li></ul>
+<h3 id="ch8_06">Where to get the information</h3>
+<p>And where do you get the information? Vendor blogs: Unit 42, Kaspersky, ESET, Talos, Google Threat Intelligence and Microsoft. Government advisories such as CISA and the CERTs. Open feeds such as MISP and MalwareBazaar, with a free Auth-Key. VirusTotal for lookups, with the privacy warning. And MITRE ATT&amp;CK for mapping. I personally read the Unit 42 and Kaspersky reports; the rest are examples of where to look, so check each source before you rely on it.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Type</th><th>Where</th><th>Status</th></tr></thead><tbody><tr><td>Vendor reports</td><td>Unit 42, Kaspersky Securelist</td><td>Read for this video</td></tr><tr><td>Feeds / lookups</td><td>MISP, MalwareBazaar (free Auth-Key), VirusTotal</td><td>Docs read</td></tr><tr><td>Framework</td><td>MITRE ATT&amp;CK</td><td>Not verified here</td></tr><tr><td>Other vendors</td><td>ESET, Talos, Google Threat Intelligence, Microsoft</td><td>Examples, check each yourself</td></tr><tr><td>Government</td><td>CISA advisories, CERTs</td><td>Examples, check each yourself</td></tr></tbody></table></div>
+<h3 id="ch8_07">Portfolio blog structure</h3>
+<p>The structure of the blog post for your portfolio: first, a campaign summary. Second, a formatted IOC table. Third, a comparison of the reports with the overlap and the confidence. Fourth, an ATT&amp;CK map. Fifth, detections that are not hash-based. Sixth, the lab. And seventh, the references. And the most important advice: write what you know and what you do not know. That is what shows you are a real analyst.</p>
+<ul><li>1 · Campaign summary</li><li>2 · Formatted IOC table</li><li>3 · Report comparison + overlap + confidence</li><li>4 · ATT&amp;CK map</li><li>5 · Detections that are not hash-based</li><li>6 · The lab · 7 · References</li></ul>
+<h3 id="ch8_08">Closing</h3>
+<p>Thank you for staying to the end. The journey went from the hash as a fingerprint to the hash as part of a system: intel produces, the SIEM searches, the hunter verifies, an analyst correlates the reports, and in the end you build a lab that proves you understand. If you want to go deeper into any chapter, tell me which one and I will make it in more detail.</p>
+<p dir="ltr"><strong>Hash → Intel → SIEM → Hunter → Lab</strong></p>
+<p>Write what you know, and what you do not know</p>
+<h2 id="rvs">Real vs synthetic</h2><ul><li>Real: the commands run in the sandbox and so do their outputs (avalanche: one character flipped 141 of 256 bits and 63 of 64 hex characters; TLSH distances on synthetic variants: 5, 7 and 44; imphash on benign pip launcher files, to show the method only).</li><li>Real: the output of the hunt logic on the synthetic data: 638 matches = 2 high-confidence + 636 low-confidence for one benign admin tool. The WS-014 pivot and the retro-hunt dates (15 and 8 days) are real outputs of Python code.</li><li>Synthetic / mock-up: the Sysmon events (5,003 events, 35 machines), host and user names, the IOC feed, the CSV/MISP records, and the VirusTotal page (an illustration). IPs are from documentation ranges. SIEM queries are SPL-style, run as equivalent Python logic.</li><li>Not claimed: ATT&amp;CK technique IDs (tactic names only), VirusTotal tier claims, the layout of CISA reports, or that the Unit 42 and Securelist campaigns are the same actor: similar tradecraft, and the two reports share no IOCs.</li><li>The diagrams and GIFs in this article were drawn for explanation.</li></ul>
+<h2 id="refs">References</h2><ol class="reflist" dir="ltr"><li id="ref1">D. Bianco, "The Pyramid of Pain" (SpeakerDeck) - <a href="https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations" target="_blank" rel="noopener">https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations</a></li><li id="ref2">Google Online Security Blog, "Announcing the first SHA-1 collision" (2017-02-23) - <a href="https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html" target="_blank" rel="noopener">https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html</a></li><li id="ref3">NIST CSRC, "Research results on SHA-1 collisions" (2017-02-24) - <a href="https://csrc.nist.gov/news/2017/research-results-on-sha-1-collisions" target="_blank" rel="noopener">https://csrc.nist.gov/news/2017/research-results-on-sha-1-collisions</a></li><li id="ref4">Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></li><li id="ref5">Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></li><li id="ref6">Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></li><li id="ref7">VirusTotal blog, "VirusTotal imphash" (2014) - <a href="https://blog.virustotal.com/2014/02/virustotal-imphash.html" target="_blank" rel="noopener">https://blog.virustotal.com/2014/02/virustotal-imphash.html</a></li><li id="ref8">TLSH, papers and technical overview - <a href="https://tlsh.org/papers.html" target="_blank" rel="noopener">https://tlsh.org/papers.html</a></li><li id="ref9">Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></li><li id="ref10">MISP data models - <a href="https://www.misp-project.org/datamodels/" target="_blank" rel="noopener">https://www.misp-project.org/datamodels/</a></li><li id="ref11">VirusTotal docs, VirusTotal Intelligence introduction - <a href="https://docs.virustotal.com/docs/virustotal-intelligence-introduction" target="_blank" rel="noopener">https://docs.virustotal.com/docs/virustotal-intelligence-introduction</a></li><li id="ref12">VirusTotal docs, Comments - <a href="https://docs.virustotal.com/docs/comments" target="_blank" rel="noopener">https://docs.virustotal.com/docs/comments</a></li><li id="ref13">VirusTotal docs, File search modifiers - <a href="https://docs.virustotal.com/docs/file-search-modifiers" target="_blank" rel="noopener">https://docs.virustotal.com/docs/file-search-modifiers</a></li><li id="ref14">abuse.ch, MalwareBazaar (GitHub) - <a href="https://github.com/abusech/MalwareBazaar/" target="_blank" rel="noopener">https://github.com/abusech/MalwareBazaar/</a></li></ol>
+            </div>
+        </article>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <span class="footer-text">© 2026 Motaw3</span>
+            <div class="social-links">
+                <a href="https://github.com/Khaledak74" target="_blank" rel="noopener" aria-label="GitHub">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                </a>
+                <a href="https://www.linkedin.com/in/khaled-motawea-0861b1265/" target="_blank" rel="noopener" aria-label="LinkedIn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+                <a href="https://www.youtube.com/@Kmotawea" target="_blank" rel="noopener" aria-label="YouTube">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="https://medium.com/@motaweak226" target="_blank" rel="noopener" aria-label="Medium">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13.54 12a6.8 6.8 0 0 1-6.77 6.82A6.8 6.8 0 0 1 0 12a6.8 6.8 0 0 1 6.77-6.82A6.8 6.8 0 0 1 13.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42s-3.38-2.88-3.38-6.42 1.51-6.42 3.38-6.42 3.38 2.88 3.38 6.42zM24 12c0 3.17-.53 5.75-1.19 5.75s-1.19-2.58-1.19-5.75.53-5.75 1.19-5.75S24 8.83 24 12z"/></svg>
+                </a>
+                <a href="https://www.instagram.com/kmotawea16" target="_blank" rel="noopener" aria-label="Instagram">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.054 1.805.249 2.227.412.56.216.96.474 1.38.894.42.42.678.82.894 1.38.163.422.358 1.057.412 2.227.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.054 1.17-.249 1.805-.412 2.227-.216.56-.474.96-.894 1.38-.42.42-.82.678-1.38.894-.422.163-1.057.358-2.227.412-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.17-.054-1.805-.249-2.227-.412-.56-.216-.96-.474-1.38-.894-.42-.42-.678-.82-.894-1.38-.163-.422-.358-1.057-.412-2.227-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.054-1.17.249-1.805.412-2.227.216-.56.474-.96.894-1.38.42-.42.82-.678 1.38-.894.422-.163 1.057-.358 2.227-.412 1.266-.058 1.646-.07 4.85-.07zM12 0C8.741 0 8.333.014 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.132 5.775.072 7.053.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126s1.384 1.078 2.126 1.384c.766.296 1.636.499 2.913.558C8.333 23.986 8.741 24 12 24s3.667-.014 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.717 2.126-1.384s1.078-1.384 1.384-2.126c.296-.765.499-1.636.558-2.913.058-1.28.072-1.687.072-4.947s-.014-3.667-.072-4.947c-.06-1.277-.262-2.148-.558-2.913-.306-.788-.717-1.459-1.384-2.126s-1.384-1.078-2.126-1.384c-.765-.296-1.636-.499-2.913-.558C15.667.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                </a>
+            </div>
+            <span class="footer-text">Built with caffeine & curiosity</span>
+        </div>
+    </footer>
+    <script src="main.js"></script>
+</body>
+</html>
