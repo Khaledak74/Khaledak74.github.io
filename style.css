@@ -1741,6 +1741,7 @@ main {
 /* --- New badge (auto-expires, see script in index.html) --- */
 .badge-new {
     display: inline-block;
+    align-self: flex-start;
     font-family: var(--font-mono);
     font-size: 0.68rem;
     font-weight: 700;
