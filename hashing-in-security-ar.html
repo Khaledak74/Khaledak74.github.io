@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الـ Hash في عمليات الـ Blue Team > Motaw3</title>
+    <meta name="description" content="بحث عملي عن أهمية الـ hash في شغل الـ Blue Team: من الصفر لحد الـ hunt الإنتاجي، وكل ادعاء نظري وراه إثبات عملي.">
+    <link rel="preload" href="style.css?v=2" as="style">
+    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="icon" type="image/svg+xml" href="assets/motaw3-logo.svg">
+    <style>
+.post-content{max-width:820px;margin:0 auto}
+.post-content h3{font-family:var(--font-mono);color:var(--text-primary);margin:2rem 0 .75rem;font-size:1.15rem}
+.post-content .figure{margin:1.5rem 0;text-align:center}
+.post-content .figure img{display:inline-block;max-width:100%;border:1px solid var(--border-color);border-radius:var(--radius-sm);box-shadow:0 2px 14px rgba(0,0,0,.4)}
+.post-content figcaption,.refline{font-size:.8rem;color:var(--text-muted);font-family:var(--font-mono)}
+.refline{margin:-.5rem 0 1.5rem;word-break:break-all;text-align:left;direction:ltr}
+.post-content .tbl{overflow-x:auto}
+.post-content pre code{white-space:pre;font-size:.85rem}
+.post-content ol{padding-left:1.5rem;margin-bottom:1.5rem;color:var(--text-secondary)}
+.toc{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius);padding:1rem 1.5rem;margin:1.5rem 0}
+.toc ol{margin:.5rem 0 0;padding-left:1.5rem}
+.post-content .note{border-left:3px solid var(--accent-yellow);padding:.75rem 1rem;background:var(--bg-card);border-radius:var(--radius-sm)}
+.post-content .badge{display:inline-flex}
+[dir=rtl] .post-content ul,[dir=rtl] .post-content ol:not([dir=ltr]){padding-left:0;padding-right:1.5rem}
+[dir=rtl] .post-content h2::before{content:"# "}
+</style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo" aria-label="Motaw3 - home"><img src="assets/motaw3-logo.svg" alt="" class="logo-mark">Motaw3</a>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="blue-team.html">Blue Team</a></li>
+                <li><a href="red-team.html">Red Team</a></li>
+                <li><a href="soc-projects.html">SOC Projects</a></li>
+		<li><a href="rules.html">Rules</a></li>
+                <li><a href="sdn-nfv.html">SDN/NFV</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <article class="container">
+            <header class="post-header">
+                <h1 class="mono">الـ Hash في عمليات الـ Blue Team</h1>
+                <p class="post-meta mono">2026-11-27 · Motaw3 · hashing / threat hunting / SIEM / threat intel · <a href="hashing-in-security-en.html">English</a></p>
+            </header>
+            <div class="post-content" dir="rtl">
+                <figure class="figure"><img src="assets/hashing/blog-hero-hashing.jpg" alt="صورة الغلاف: بصمة متكونة من حروف hex تحت عدسة مكبرة بتوضّح strings من MD5 وSHA-256 وTLSH، وجنبها لوحة SIEM ودرع وملف malware بيتطابق مع قاعدة بيانات"><figcaption>صورة الغلاف. بصمة hex تحت عدسة مكبرة بتوضّح الـ hashes (MD5 وSHA-256 وTLSH)، وجنبها لوحة SIEM ودرع وملف malware بيتقارن مع قاعدة بيانات: المقال كله في صورة واحدة، الهوية على الشمال والـ detection على اليمين. تصميم معمول للمقال ده.</figcaption></figure>
+                <p>بحث عملي: الـ hash بيديك إيه في شغل الـ Blue Team اليومي، من الصفر لحد الـ hunt الحقيقي. قاعدة المقال: مفيش ادعاء نظري يقف لوحده، كل حاجة وراها حاجة تقدر تنفذها أو تتأكد منها بنفسك.</p>
+                <p class="note">ملاحظة أمانة: كل الداتا في الأمثلة synthetic وموضّح كده. الأوامر والنتايج اتنفذت فعلاً، في sandbox وفي لاب Splunk حقيقي بجهاز واحد بتاع الكاتب (الصور في فصل 4 و6 لقطات حقيقية). صفحة VirusTotal شكل توضيحي؛ داتا الـ hunt الكبيرة في فصل 6 synthetic وموضّح كده؛ وكل hash ظاهر من اللاب هو ملف تجريبي بتاع الكاتب نفسه، مش IOC لتهديد حقيقي. أي هاش من حملة حقيقية ماظهرش كـ detection؛ بنذكر أعداد بس.</p>
+                <nav class="toc"><strong>المحتويات</strong><ol><li><a href="#ch1">الفصل 1: ليه الـ hash مهم في شغل الـ Blue Team</a></li><li><a href="#ch2">الفصل 2: أساسيات الـ hash من الصفر</a></li><li><a href="#ch3">الفصل 3: أنواع الـ hashes وأنهي واحد بيستاهل مكانه</a></li><li><a href="#ch4">الفصل 4: الـ hashes في اللوجز</a></li><li><a href="#ch5">الفصل 5: جانب الـ intel</a></li><li><a href="#ch6">الفصل 6: الـ hunt في الـ SIEM</a></li><li><a href="#ch7">الفصل 7: دراسة حالة: الـ correlation بين Unit 42 وShadowCloud</a></li><li><a href="#chEV">الفصل 8: الـ evasion - إزاي المهاجم بيهزم الـ exact hash</a></li><li><a href="#chDE">الفصل 9: الـ detection engineering - من hash لـ rule شغّالة</a></li><li><a href="#chFP">الفصل 10: الـ false positives ولستة المعروف وسليم</a></li><li><a href="#chFX">الفصل 11: الفورنزكس - الـ hash كـ chain of custody</a></li><li><a href="#chLIM">الفصل 12: الحدود - فين الـ hash مابيفيدش</a></li><li><a href="#ch8">الفصل 13: النتايج: إيه اللي الأدلة بتقوله</a></li></ol></nav>                <h2 id="ch1">الفصل 1: ليه الـ hash مهم في شغل الـ Blue Team</h2>
+<h3 id="ch1_01">سؤال البحث</h3>
+<p>المقال ده بحث عملي، مش فصل من كتاب كريبتوجرافي. السؤال اللي بيجاوب عليه: الـ hash بيديك إيه فعلاً في شغل الـ Blue Team اليومي، وفين بيوقف عن إنه يديك أي حاجة؟ همشي ورا الـ hash في شغل SOC حقيقي، من أول ما الفيندور ينزّل تقرير، لحد ما الأليرت يوصل للمحلل. قاعدة المقال: مفيش ادعاء نظري يقف لوحده. كل خاصية وكل رقم وكل تكنيك وراها حاجة تقدر تنفذها أو تتأكد منها بنفسك، وأي حاجة مقدرتش أثبتها متوضّح إنها كده.</p>
+<p dir="ltr"><strong>Research questions</strong></p>
+<ul><li>س1. إيه هو الـ hash، وأنهي خاصية فيه اللي شغل الـ Blue Team بيعتمد عليها فعلاً؟</li><li>س2. أنهي نوع hash يناسب أنهي مهمة في الـ Blue Team، وبتدفع إيه لما يفشل؟</li><li>س3. الـ hashes بتمشي إزاي من الـ telemetry والـ intel لحد ما تبقى أليرت في الـ SIEM؟</li><li>س4. فين الـ detection المعتمد على الـ hash بيكسر، وإيه اللي بيشيل الشغل ساعتها؟</li></ul>
+<h3 id="ch1_02">من بلوج الفيندور</h3>
+<p>خلّينا نبدأ بالصورة الكبيرة. فيندور زي Mandiant أو CrowdStrike أو أي فريق threat intel بينزّل بلوج عن حملة جديدة. جوه البلوج ده فيه الـTTPs، يعني الأساليب اللي استخدمها المهاجم، وفيه الـIOCs: دومينات، عناوين IP، وأهم حاجة عندنا النهارده، الـhashes بتاعة الملفات.</p>
+<p dir="ltr"><strong>Vendor blog (campaign report)  →  TTPs (behaviors)  →  IOCs domains · IPs · file hashes</strong></p>
+<h3 id="ch1_03">فريق الـthreat intel</h3>
+<p>فريق الـthreat intel بياخد الـIOCs دي وينضّفها. بيشيل المكرر، وبيحط جنب كل واحد المصدر، ودرجة الثقة، وتاريخ الانتهاء. وبعدين بتتحط في قايمة مشتركة. ممكن CSV بسيط، أو STIX، أو منصة زي MISP. وده مهم، لأن الـIOC من غير سياق بيتحول لضوضاء بعد كام شهر.</p>
+<p dir="ltr"><strong>IOC extraction  →  De-duplicate  →  Add source · confidence · expiry  →  CSV / STIX / MISP</strong></p>
+<h3 id="ch1_04">من القايمة للـSIEM</h3>
+<p>بعد كده بييجي دور الـdetection engineer. بيحمّل القايمة دي في الـSIEM كـlookup، يعني جدول بيقارن بيه الأحداث. وبعده الـthreat hunter، اللي بيدوّر بالقايمة دي على الداتا الحالية، وعلى الداتا القديمة كمان. ولو لقى match، فريق الـincident response بيبدأ يحدد النطاق: كام جهاز، ومنين بدأ الموضوع.</p>
+<figure class="figure"><img src="assets/hashing/f_pipeline.png" alt="f_pipeline" loading="lazy"><figcaption>شكل 1. الطريق اللي الـ hash بيمشيه في الـ blue team: تقرير الفيندور بيغذّي فريق الـ intel (dedupe ومصدر وثقة وتاريخ انتهاء)، اللستة المشتركة بتغذّي الـ SIEM lookup، والـ hunt بيغذّي الـ incident response. مرسوم للمقال ده.</figcaption></figure>
+<figure class="figure"><img src="assets/hashing/ioc_pipeline.gif" alt="animation" loading="lazy"><figcaption>شكل 2. نفس التدفق متحرك: من التقرير للـ IOC list للـ lookup للـ match.</figcaption></figure>
+<h3 id="ch1_05">الـhash هوية، مش حكم</h3>
+<p>نقطة مهمة من الأول: الـhash هوية لملف بالظبط، مش حكم عليه. لو الـhash اتطابق مع IOC معروف، ده بيقولك: الملف ده نفسه اللي اتشاف في الحملة. لكن ميقولكش إن الجهاز مخترق. السياق هو اللي بيقول: مين شغّل الملف، ومن أنهي مسار، وبأنهي command line، واتصل بإيه بعد كده.</p>
+<p dir="ltr"><strong>Hash = identity of exact bytes</strong></p>
+<p>السياق هو اللي بيقول: مين شغّله؟ ومن أنهي مسار؟ واتصل بإيه؟</p>
+<h3 id="ch1_06">Pyramid of Pain</h3>
+<p>وعشان نحط توقعاتنا صح: ديفيد بيانكو، في عرضه المشهور Pyramid of Pain، وصف الـhashes بإنها أعلى مؤشرات في الثقة، لكنها حسّاسة جداً للتغيير، حتى بالغلط. يعني لو المهاجم غيّر بايت واحد، الـhash كله بيتغير. هنرجع للنقطة دي في الفصل التالت، وهنشوف إيه البدائل اللي بتعمّر أكتر.</p>
+<figure class="figure"><img src="assets/hashing/f_pyramid.png" alt="f_pyramid" loading="lazy"><figcaption>شكل 3. هرم الوجع بتاع Bianco [1]. الـ hash values في القاع: إنك تمنع واحد مابيكلّف المهاجم حاجة تذكر. خد بالك من اللي فوق - دي الطبقات اللي برنامج الـ detection الناضج بيعيش عليها فعلاً.</figcaption></figure>
+<p class="refline">References: <a href="#ref1">[1]</a> D. Bianco, "The Pyramid of Pain" (SpeakerDeck) - <a href="https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations" target="_blank" rel="noopener">https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations</a></p>
+<h3 id="ch1_07">خريطة المقال</h3>
+<p>خريطة المقال: الفصل التاني أساسيات الـhash من الصفر على الترمنال. التالت، أنواع الـhashes غير العادي، وليه المهاجم بيهزم كل نوع. الرابع، الـhashes بتظهر فين في اللوجز. الخامس، جانب الـintel. السادس، جانب الـhunter في الـSIEM. والسابع دراسة حالة كاملة على حملة حقيقية حديثة، وإزاي تعمل correlation بين تقارير الفيندورز. من التامن للاتناشر بننزل أعمق: الـ evasion متثبت على ملف حقيقي، الـ detection engineering من Sigma لـ Splunk، الـ false positives ولستة المعروف وسليم، الـ hash كـ chain of custody، والحدود. والتلاتاشر، النتايج: فين الأدلة بتقول إن الـhash بيشيل الشغل وفين بيكسر.</p>
+<ul><li>2 · أساسيات الـhash من الصفر</li><li>3 · أنواع الـhashes واستخداماتها</li><li>4 · الـhashes في اللوجز</li><li>5 · جانب الـintel</li><li>6 · جانب الـhunter في الـSIEM</li><li>7 · دراسة حالة: حملة حديثة</li><li>8 · النتايج</li></ul>
+<h2 id="ch2">الفصل 2: أساسيات الـ hash من الصفر</h2>
+<h3 id="ch2_01">أساسيات الـhash على الترمنال</h3>
+<p>نبدأ بالأساسيات، وعلى الترمنال. هنعمل ملف نصي بسيط ونحسب له الـhash. الأوامر بتتنفذ فعلاً في sandbox، والملف ده مجرد ملف تجريبي مالوش أي ضرر. الأمر الأول sha256sum على الملف.</p>
+<span class="badge badge-active">Sandbox terminal · harmless demo file</span>
+<pre dir="ltr"><code>$ echo "invoice_2026.txt demo" &gt; demo.txt
+$ cat demo.txt
+invoice_2026.txt demo
+$ sha256sum demo.txt</code></pre>
+<h3 id="ch2_02">SHA-256: ٦٤ حرف hex</h3>
+<p>شوف الناتج: ٦٤ حرف hex. كل حرفين بيمثلوا بايت، يعني ٣٢ بايت، يعني ٢٥٦ bit. هو ده SHA-256. ولو شغّلت الأمر على نفس الملف مليون مرة، هتاخد نفس الناتج بالظبط. ده معناه إن الـhash deterministic.</p>
+<span class="badge badge-active">Sandbox terminal · harmless demo file</span>
+<pre dir="ltr"><code>$ sha256sum demo.txt
+6d2b257dbc14f13f847be988f43ee4db7206f1f451d0f7f97789a8255cfdb9f2  demo.txt
+$ sha256sum demo.txt   # run it again
+6d2b257dbc14f13f847be988f43ee4db7206f1f451d0f7f97789a8255cfdb9f2  demo.txt
+# same input, same output: deterministic</code></pre>
+<h3 id="ch2_03">حرف واحد اتغيّر: 141 / 256 bits و 63 / 64 hex chars</h3>
+<p>دلوقتي هنعمل تغيير بسيط جداً. هنضيف نقطة في آخر محتوى الملف، يعني حرف واحد بس، ونحسب الـhash تاني. اتغيّر؟ اتغيّر بالكامل. أنا قِستها في الـsandbox: من ٢٥٦ bit، فرق ١٤١ bit، وده قريب من النص، ومن ٦٤ حرف hex، فرق ٦٣ حرف. ده اسمه avalanche effect. تغيير صغير في الدخل، بيغيّر الخرج بشكل ميبانش منه أي شبه.</p>
+<span class="badge badge-active">Sandbox · measured</span>
+<figure class="figure"><img src="assets/hashing/f_avalanche.png" alt="f_avalanche" loading="lazy"><figcaption>شكل 4. قياس المقال نفسه: حرف واحد اتضاف لـ demo.txt قلّب 141 من 256 bit (115 فضلوا) وغيّر 63 من 64 hex char (واحد فضل). الأوامر في فصل 2 - شغّلها بنفسك.</figcaption></figure>
+<figure class="figure"><img src="assets/hashing/avalanche.gif" alt="animation" loading="lazy"><figcaption>شكل 5. مقارنة الـ avalanche متحركة.</figcaption></figure>
+<pre dir="ltr"><code>demo.txt  (…demo)
+  6d2b257dbc14f13f847be988f43ee4db7206f1f451d0f7f97789a8255cfdb9f2
+demo2.txt (…demo.)
+  7413ec07d8b92e40529d443e4715bd1a9e056053cfeeaadefeeb1b8eabac1aef</code></pre>
+<p>تجربة واحدة قصة، فقست التوزيع. قلبت bit واحد عشوائي في الملف، 400 مرة، وعديت كام bit من الـ256 بتاع الناتج اتغير كل مرة. المتوسط المقاس 129.9 bit، قريب جداً من المثالي 128، ومفيش ولا محاولة قريبة من الصفر. دي الـ avalanche effect كخاصية مقاسة، مش شعار.</p>
+<span class="badge badge-active">Sandbox · 400 تجربة حقيقية</span>
+<figure class="figure"><img src="assets/hashing/f_avalanche_dist.png" alt="avalanche distribution" loading="lazy"><figcaption>شكل 6. 400 تجربة حقيقية، في كل واحدة byte عشوائي اتقلّب: عدد الـ bits المتقلبة متجمّع حوالين 128 (المتوسط 129.9). الـ avalanche خاصية إحصائية تتقاس، مش استعراض لمرة واحدة.</figcaption></figure>
+<figure class="figure"><img src="assets/hashing/avalanche_bits.gif" alt="avalanche bit map animation" loading="lazy"><figcaption>شكل 7. كل فريم هو الـ XOR bitmap لتجربة حقيقية؛ المربعات البيضا bits اتقلبت.</figcaption></figure>
+<h3 id="ch2_04">ليه ده مفيد؟</h3>
+<p>ليه ده مفيد؟ لأن الـhash بيشتغل كـfingerprint. لو الـhash اتطابق، الملفين نفس البايتات. ولو اتغير حتى حرف، هتعرف فوراً. ومش بس كده: الـhash one-way. مش ممكن ترجّع الملف من الـhash. فتقدر تشارك الـhash في تقرير من غير ما تشارك الملف نفسه.</p>
+<ul><li>Deterministic: نفس الملف، نفس الـhash</li><li>طول ثابت مهما كان حجم الملف</li><li>One-way: مش بترجّع الملف من الـhash</li><li>Avalanche effect: تغيير صغير يغيّر كل حاجة</li></ul>
+<h3 id="ch2_05">MD5 · SHA-1 · SHA-256</h3>
+<p>دلوقتي ننفذ التلات خوارزميات المشهورة على نفس الملف. MD5 بيدّي ٣٢ حرف، SHA-1 بيدّي ٤٠ حرف، وSHA-256 بيدّي ٦٤ حرف. كلهم بيحوّلوا أي حجم ملف لقيمة بطول ثابت. الفرق إن الخوارزميات القديمة اتكسرت من ناحية الـcollisions، وده بنتكلم عنه دلوقتي.</p>
+<span class="badge badge-active">Sandbox terminal · harmless demo file</span>
+<pre dir="ltr"><code>$ md5sum demo.txt
+cbcdf11c260d4a8561e3b77b3ee507f2  demo.txt
+$ sha1sum demo.txt
+01e8aff618223db63050fe1dd5a0de177d126d15  demo.txt
+$ sha256sum demo.txt
+6d2b257dbc14f13f847be988f43ee4db7206f1f451d0f7f97789a8255cfdb9f2  demo.txt</code></pre>
+<h3 id="ch2_06">ليه SHA-1 اتساب؟</h3>
+<p>في فبراير ٢٠١٧، فريق من CWI في أمستردام وجوجل أعلنوا أول SHA-1 collision، يعني ملفين مختلفين ليهم نفس الـhash. حسب مدونة جوجل، الهجوم احتاج حوالي تسع كوينتيليون عملية SHA-1، لكنه لسه أسرع من الـbrute force بأكتر من مية ألف مرة. وNIST كان بالفعل بطّل SHA-1 للتوقيع الرقمي في آخر ٢٠١٣، وكان قرر إنه deprecated من ٢٠١١، ونصح بالانتقال لـSHA-2 أو SHA-3.</p>
+<figure class="figure"><img src="assets/hashing/f_sha1.png" alt="f_sha1" loading="lazy"><figcaption>شكل 8. الخط الزمني لـ SHA-1 اللي بيحرك السياسات: NIST أعلنت تقاعده في 2011، ومنعته من التوقيعات الرقمية آخر 2013، وأول تصادم عملي جه في فبراير 2017 [2][3].</figcaption></figure>
+<p class="refline">References: <a href="#ref2">[2]</a> Google Online Security Blog, "Announcing the first SHA-1 collision" (2017-02-23) - <a href="https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html" target="_blank" rel="noopener">https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html</a><br><a href="#ref3">[3]</a> NIST CSRC, "Research results on SHA-1 collisions" (2017-02-24) - <a href="https://csrc.nist.gov/news/2017/research-results-on-sha-1-collisions" target="_blank" rel="noopener">https://csrc.nist.gov/news/2017/research-results-on-sha-1-collisions</a></p>
+<h3 id="ch2_07">في الشغل</h3>
+<p>طيب ده معناه إيه في الشغل؟ لو IOC جاي بـMD5 أو SHA-1 بس، اعتبره دليل أولي. دوّر بيه، بس أكّد بحاجة تانية: اسم الملف، المسار، الـsigner، الحجم، أو سلوك العملية. ولو انت اللي بتبني قايمة، فضّل SHA-256. وهنشوف في الفصل السابع إن تقرير Unit 42 الحديث بيستخدم SHA-256.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>IOC comes as</th><th>Treat it as</th><th>Do</th></tr></thead><tbody><tr><td>MD5 or SHA-1 only</td><td>Initial lead</td><td>Search it, then confirm: name, path, signer, size, behavior</td></tr><tr><td>SHA-256</td><td>Stronger match</td><td>Still read the context before acting</td></tr><tr><td>Your own lists</td><td>Prefer SHA-256</td><td>Record the source and date</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch2_08">على ويندوز</h3>
+<p>وعلى ويندوز، الأمر المقابل هو Get-FileHash مع الخيار -Algorithm SHA256 واسم الملف، والناتج نفسه بالظبط. وده أمر هتحتاجه كتير، خصوصاً في الـforensics.</p>
+<span class="badge badge-active">REFERENCE: PowerShell syntax, not run in this sandbox</span>
+<pre dir="ltr"><code>$ Get-FileHash -Algorithm SHA256 .\demo.txt
+Algorithm       Hash
+---------       ----
+SHA256          6D2B257DBC14F13F847BE988F43EE4DB7206F1F451D0F7F97789A8255CFDB9F2</code></pre>
+<h3 id="ch2_09">عادة المحترف</h3>
+<p>وفيه عادة بتفرّق المحترف عن غيره: أي ملف أو دليل بتستلمه، احسب الـhash بتاعه الأول، وسجّله في الـcase notes، واشتغل على نسخة، والأصل يفضل زي ما هو. كده تقدر تثبت إن الأصل ما اتغيّرش، وتتأكد إن اللي حلّلته هو بالظبط اللي اتجمع. ده اللي بيفرق بين تحليل تقدر تدافع عنه، وتحليل مش هتقدر تثبته.</p>
+<p dir="ltr"><strong>Hash the evidence first  →  Record it in case notes  →  Work on a copy  →  Original stays untouched</strong></p>
+<h3 id="ch2_10">الخلاصة</h3>
+<p>خلاصة الأساسيات: الـhash fingerprint سريع ودقيق لملف بعينه. بس هو بيعرّف الملف، مش بيحكم عليه، وبيتغير بأي تعديل. وقبل ما نسيب الأساسيات، في ادعائين الناس بتسلّم بيهم من غير دليل هنثبتهم دلوقتي: إن تصادم SHA-1 ملفات حقيقية تقدر تنزّلها، وإن سرعة الـhash خاصية تشغيلية بتتقاس.</p>
+<ul><li>Fingerprint دقيق لملف بعينه</li><li>بيعرّف الملف، مش بيحكم عليه</li><li>أي تعديل بيغيّره</li><li>جايين: إثباتين معظم الناس قريتهم بس</li></ul>
+<h3 id="ch2_11">الإثبات: تصادم SHA-1، متعاد تنفيذه</h3>
+<p>إنك تقول "SHA-1 مكسور" دي نظرية. دي العملية. جوجل نشرت أول تصادم SHA-1 عام في 2017: ملفين PDF مختلفين ليهم نفس الـSHA-1. أنا نزّلت الملفين من shattered.io وحسبت الـhash بتاعهم بنفسي في الـsandbox. قيم الـSHA-1 متطابقة. قيم الـSHA-256 مختلفة تماماً. يعني ادعاء "ممكن ملفين مختلفين يشتركوا في SHA-1 واحد" مش حاجة قريتها؛ دي قاعدة في الترمنال عندي.</p>
+<span class="badge badge-active">Sandbox · ملفات حقيقية من shattered.io</span>
+<pre dir="ltr"><code>$ sha1sum shattered-1.pdf shattered-2.pdf
+38762cf7f55934b34d179ae6a4c80cadccbb7f0a  shattered-1.pdf
+38762cf7f55934b34d179ae6a4c80cadccbb7f0a  shattered-2.pdf   # متطابقين: تصادم
+$ sha256sum shattered-1.pdf shattered-2.pdf
+2bb787a73e37352f92383abe7e2902936d1059ad9f1ba6daaa9c1e58ee6970d0  shattered-1.pdf
+d4488775d29bdef7993367d541064dbdda50d383f89f0aa13a6ff2e0894ba5ff  shattered-2.pdf   # مختلفين</code></pre>
+<figure class="figure"><img src="assets/hashing/f_shattered.png" alt="SHA-1 collision re-hashed" loading="lazy"><figcaption>شكل 9. زوج التصادم بتاع shattered.io، اتعاد حسابه محلياً للمقال ده: SHA-1 متطابق، SHA-256 مختلف تماماً [15].</figcaption></figure>
+<p>النتيجة التشغيلية: اختيار خوارزمية الـhash قرار ثقة. الحظر أو الـwhitelist بـSHA-1 في 2026 معناه إن المهاجم يقدر يصنع ملف تاني بنفس القيمة. والحل مش مجهود، الحل الخوارزمية: نفس الملفين تحت SHA-256 مفيش بينهم أي تشابه.</p>
+<p class="refline">المراجع: <a href="#ref2">[2]</a> Google Online Security Blog, "Announcing the first SHA-1 collision" (2017) - <a href="https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html" target="_blank" rel="noopener">https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html</a><br><a href="#ref15">[15]</a> SHAttered، ملفات التصادم - <a href="https://shattered.io/" target="_blank" rel="noopener">https://shattered.io/</a></p>
+<h3 id="ch2_12">السرعة خاصية تشغيلية</h3>
+<p>في خاصية محدش بيذكرها في الكتب: الـthroughput هو اللي بيحدد الـhash يقدر يعيش فين في الـpipeline. الـEDR agent اللي بيحسب hash لكل ملف بيتنفذ، أو أداة فورنزك بتحسب hash لصورة قرص كاملة، شغالين تحت ميزانية وقت. فقست. على الجهاز ده، بتعليمات SHA المدمجة في المعالج، الـSHA-1 والـSHA-256 بيجريوا قريب من 2 جيجا/ثانية، والـMD5، أقدمهم، هو الأبطأ بحوالي 0.8 جيجا/ثانية. التسريع المدمج قلب توقع الكتاب إن الأقدم أسرع.</p>
+<span class="badge badge-active">Sandbox · openssl speed، مقاس</span>
+<pre dir="ltr"><code>$ openssl speed -seconds 2 md5 sha1 sha256   # بلوكات 8192 بايت
+md5      794952.51k  في الثانية   (~0.79 GB/s)
+sha1    2049330.68k  في الثانية   (~2.05 GB/s)
+sha256  1828150.84k  في الثانية   (~1.83 GB/s)</code></pre>
+<figure class="figure"><img src="assets/hashing/f_benchmark.png" alt="hash throughput benchmark" loading="lazy"><figcaption>شكل 10. openssl speed على الجهاز ده (بلوكات 8192 بايت): SHA-1 بسرعة 2.05 GB/s، SHA-256 بـ 1.83 GB/s، وMD5 الأبطأ بـ 0.79 GB/s. تعليمات SHA في الهاردوير قلبت توقع الكتب إن الأقدم أسرع.</figcaption></figure>
+<p>يعني "SHA-256 غالي على الحجم الكبير" مش ماشية على المعالجات الحديثة. اختار الخوارزمية بمقاومة التصادم ودعم الأنظمة، مش بالخوف من السرعة.</p>
+<h2 id="ch3">الفصل 3: أنواع الـ hashes وأنهي واحد بيستاهل مكانه</h2>
+<h3 id="ch3_01">نفس الملف تقريباً، SHA-256 مختلف</h3>
+<p>النهارده بنقول إن الـhash سهل يتغير. تعالى نشوف ده بالأرقام. هنا ملف synthetic، وعملنا منه نسختين. الأولى غيّرنا فيها خمستاشر حرف بس من تلات آلاف كلمة، والتانية غيّرنا ٣٠٠ حرف. وكمان ملف تالت مالوش علاقة بيهم. وبنحسب SHA-256 لكل واحد: الأربع قيم مختلفة تماماً.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>File</th><th>Change</th><th>SHA-256 (first 24 hex)</th></tr></thead><tbody><tr><td>base</td><td>—</td><td>8c386643cf50532032dcce89…</td></tr><tr><td>variant A</td><td>15 chars edited</td><td>b09a9a9cc859d039c4f2ab16…</td></tr><tr><td>variant B</td><td>300 chars edited</td><td>fb997577a03dca70cd99d49f…</td></tr><tr><td>unrelated</td><td>—</td><td>a472c477d609cffea818ab4a…</td></tr></tbody></table></div>
+<h3 id="ch3_02">Pyramid of Pain</h3>
+<p>ده بالظبط اللي ديفيد بيانكو قاله في الـPyramid of Pain: الـhashes أعلى مؤشرات في الثقة، لكنها حسّاسة للتغيير، حتى بالغلط. وده معناه عملياً: لو المهاجم أعاد الـcompile، أو ضاف بايت، الـIOC القديم يتحول لحاجة مش بتطابق ولا نسخة.</p>
+<p dir="ltr"><strong>Hashes: highest confidence</strong></p>
+<p>لكن حسّاسة جداً للتغيير، حتى بالغلط</p>
+<p class="refline">References: <a href="#ref1">[1]</a> D. Bianco, "The Pyramid of Pain" (SpeakerDeck) - <a href="https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations" target="_blank" rel="noopener">https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations</a></p>
+<h3 id="ch3_03">imphash</h3>
+<p>عشان كده ظهرت أنواع تانية. أولها imphash. Mandiant شرحته في مقال قديم: بيتحسب hash من أسماء الـlibraries والـAPIs اللي الملف بيستوردها، وبالترتيب. وده لأن ترتيب الـimports بيطلع من ترتيب الكود وقت الـlink، فعينات من نفس العيلة غالباً بتشارك نفس القيمة. وMandiant كانت بتستخدمه عشان تتبّع الـbackdoors اللي كل مجموعة بتفضّلها.</p>
+<p dir="ltr"><strong>PE import table (DLL + API names, in order)  →  Hash of that list  →  imphash (related samples often share it)</strong></p>
+<p class="refline">References: <a href="#ref6">[6]</a> Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></p>
+<h3 id="ch3_04">مثال Mandiant: ترتيب الكود غيّر الـimphash</h3>
+<p>وعشان نشوف إنه مش سحر، في نفس مقال Mandiant مثال: كود بسيط اتعمل له compile، وطلع imphash، وبعدين اتغيّر ترتيب دالتين في الكود، فطلع imphash مختلف تماماً. القيمتين معروضتين على الشاشة من المقال نفسه. يعني المهاجم اللي عارف بالفكرة ممكن يغيّر ترتيب الكود ويتخطّى الـimphash.</p>
+<pre dir="ltr"><code>Original source order
+  0c6803c4e922103c4dca5963aad36ddf
+Two functions reordered
+  b8bb385806b89680e13fc0cf24f4431e</code></pre>
+<p class="refline">References: <a href="#ref6">[6]</a> Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></p>
+<h3 id="ch3_05">حساب الـimphash بـpefile</h3>
+<p>وده كمان مثال حي على جهازي: دي ملفات PE سليمة جاية مع أداة pip، وبنحسب لها imphash باستخدام مكتبة pefile. لاحظ إن لكل ملف قيمة مختلفة. المقصود هنا طريقة الحساب، مش إن دول عينات malware. وVirusTotal كمان ضافت imphash في ٢٠١٤، بعد ما Mandiant كتبت عنه.</p>
+<span class="badge badge-active">Benign PE files · pefile · method demo only</span>
+<pre dir="ltr"><code>$ python3 -c "import pefile;print(pefile.PE(f).get_imphash())"   # f = benign pip launcher stubs
+t32.exe  imphash 5e24f42b46c247f13d78f0f21a4a2bf7
+t64.exe  imphash c51d659b4b1142d4af3795d09f1d63f7
+w32.exe  imphash af457a899dff0be8f96c758b66fd5f37</code></pre>
+<p class="refline">References: <a href="#ref7">[7]</a> VirusTotal blog, "VirusTotal imphash" (2014) - <a href="https://blog.virustotal.com/2014/02/virustotal-imphash.html" target="_blank" rel="noopener">https://blog.virustotal.com/2014/02/virustotal-imphash.html</a><br><a href="#ref6">[6]</a> Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></p>
+<h3 id="ch3_10">الـimphash بيعيش عبر تحديث النسخة: إثبات على ملفات حقيقية</h3>
+<p>ملفات pip بتوضح الطريقة. هنا الخاصية المهمة، مثبتة على سوفتوير حقيقي. نزّلت نسختين رسميتين من PuTTY، 0.78 و0.79، وحسبت الـhash للاتنين. قيم الـSHA-256 مفيش بينها ولا hex char مشترك: كـhashes دقيقة دول غرباء. وقيم الـimphash متطابقة، لأن جدول الـimports ما اتغيرش بين النسختين. ده بالظبط ليه فرق الـintel بتتبع العيلات بالـimphash: الـhash الدقيق بيموت مع كل rebuild، والـimphash بيعيش.</p>
+<span class="badge badge-active">Sandbox · ملفات PuTTY حقيقية · pefile</span>
+<pre dir="ltr"><code>$ sha256sum putty-0.78.exe putty-0.79.exe
+fc6f9dbdf4b9f8dd1f5f3a74cb6e55119d3fe2c9db52436e10ba07842e6c3d7c  putty-0.78.exe
+e53c379d95e95706c5a2c4d6cd609857368a3bf14f28d7e67f6e3f8dfce6d486  putty-0.79.exe   # مفيش hex chars مشتركة
+$ python3 -c "import pefile; [print(f, pefile.PE(f).get_imphash()) for f in ('putty-0.78.exe','putty-0.79.exe')]"
+putty-0.78.exe  69573714e11441683ea863c40a1c0d54
+putty-0.79.exe  69573714e11441683ea863c40a1c0d54   # imphash متطابق</code></pre>
+<p class="refline">المراجع: <a href="#ref16">[16]</a> موقع PuTTY الرسمي - <a href="https://www.chiark.greenend.org.uk/~sgtatham/putty/" target="_blank" rel="noopener">https://www.chiark.greenend.org.uk/~sgtatham/putty/</a><br><a href="#ref6">[6]</a> Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></p>
+<h3 id="ch3_06">Fuzzy hashes</h3>
+<p>النوع التالت fuzzy hashes، زي ssdeep وTLSH. دول مش بيقولوا نفس الملف ولا لا، دول بيقولوا الملفين شبه بعض قد إيه. TLSH بيدّيك distance بين ملفين: كل ما الرقم قلّ، الملفين أشبه ببعض. ومن توثيق TLSH، هو distance metric فعلاً، وده اللي بيخليه سريع في البحث عن الأقرب في داتا كبيرة.</p>
+<ul><li>ssdeep و TLSH: الملفين شبه بعض قد إيه؟</li><li>TLSH بيدّي distance: أقل = أشبه</li><li>TLSH distance metric: بحث سريع في داتا كبيرة</li></ul>
+<p class="refline">References: <a href="#ref8">[8]</a> TLSH, papers and technical overview - <a href="https://tlsh.org/papers.html" target="_blank" rel="noopener">https://tlsh.org/papers.html</a></p>
+<h3 id="ch3_07">TLSH distance من الأصل</h3>
+<p>جربته على نفس الملفات الـsynthetic باستخدام مكتبة TLSH الحقيقية. النسخة اللي اتعدّل فيها ١٥ حرف طلعت على distance ٥ من الأصل. النسخة اللي اتعدّل فيها ٣٠٠ حرف طلعت على distance ٧. والملف اللي مالوش علاقة طلع على distance ٤٤. يعني نفس العيلة قريبة جداً، والغريب بعيد بوضوح، رغم إن الـSHA-256 بتاع كل الأربعة مختلف تماماً.</p>
+<span class="badge badge-active">SYNTHETIC DATA · real TLSH library</span>
+<figure class="figure"><img src="assets/hashing/f_tlsh.png" alt="f_tlsh" loading="lazy"><figcaption>شكل 11. TLSH على variants synthetic الـ SHA-256 بتاعها مختلف تماماً: 15 حرف متغيّرين طلّعوا 5، و300 طلّعوا 7، وملف غريب طلّع 44. التشابه بيعيش تعديلات بتموّت الـ exact hash.</figcaption></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>File</th><th>Change</th><th>TLSH distance</th></tr></thead><tbody><tr><td>base</td><td>—</td><td>0</td></tr><tr><td>variant A</td><td>15 chars edited</td><td>5</td></tr><tr><td>variant B</td><td>300 chars edited</td><td>7</td></tr><tr><td>unrelated</td><td>—</td><td>44</td></tr></tbody></table></div>
+<p>أرقام synthetic: مثال على الفكرة، مش حدود تطبّقها على عينات حقيقية</p>
+<h3 id="ch3_11">TLSH على نفس الملفات الحقيقية</h3>
+<p>نفس الاختبار، ملفات حقيقية. مسافة TLSH بين PuTTY 0.78 و0.79 هي 19: نفس العيلة بوضوح. وبين PuTTY وملف shattered المسافة 463، وبين PuTTY والـHTML بتاع المقال ده 688: غرباء بوضوح. الأرقام الـsynthetic فوق بتوضح الفكرة؛ الأرقام دي متقاسة على ملفات أي حد يقدر ينزّلها.</p>
+<span class="badge badge-active">Sandbox · ملفات حقيقية · python-tlsh</span>
+<pre dir="ltr"><code>TLSH distance  putty-0.78  vs  putty-0.79      =  19    نفس العيلة
+TLSH distance  putty-0.78  vs  shattered-1.pdf = 463    غريب
+TLSH distance  putty-0.78  vs  article.html    = 688    غريب</code></pre>
+<figure class="figure"><img src="assets/hashing/f_tlsh_real.png" alt="TLSH distances on real files" loading="lazy"><figcaption>شكل 12. نفس الطريقة على ملفات حقيقية: PuTTY 0.78 مقابل 0.79 طلّع 19 (نفس العيلة، imphash متطابق)، وملفات غريبة طلّعت 463 و688.</figcaption></figure>
+<h3 id="ch3_08">انتبه</h3>
+<p>بس خد بالك: دي داتا synthetic، والأرقام دي مثال على الفكرة، مش حدود تطبّقها على عينات حقيقية. وكمان فيه ورقة في موقع TLSH بتختبر إزاي ممكن تهاجم الـfuzzy hashes بتغيير متعمد في الملف. يعني حتى دول مش ضمان.</p>
+<ul><li>الأرقام دي synthetic: مثال، مش thresholds</li><li>فيه ورقة بتختبر إزاي بتتهاجم fuzzy hashes بتغيير متعمد</li><li>حتى دول مش ضمان</li></ul>
+<p class="refline">References: <a href="#ref8">[8]</a> TLSH, papers and technical overview - <a href="https://tlsh.org/papers.html" target="_blank" rel="noopener">https://tlsh.org/papers.html</a></p>
+<h3 id="ch3_09">استخدم إيه لإيه</h3>
+<p>فاستخدم كل نوع في مكانه، واعرف فشله بيكلف إيه. الـdetection المبني على hash لوحده بيموت في صمت أول ما المهاجم يعمل rebuild. والمحلل الكويس بيقرن كل hash بالسلوك اللي حواليه.</p>
+<figure class="figure"><img src="assets/hashing/f_types_flow.png" alt="أنهي hash لأنهي مهمة" loading="lazy"><figcaption>شكل 13. أنهي hash لأنهي مهمة: الهوية الدقيقة تروح لـ SHA-256، عيلة الـ build لـ imphash، تشابه المحتوى لـ ssdeep أو TLSH - وكل الفروع بتوصل لنفس الملاذ: الـ behavior وTTP detections.</figcaption></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>مهمة الـ Blue Team</th><th>نوع الـ hash</th><th>ليه بيناسب</th><th>بيفشل إزاي</th></tr></thead><tbody><tr><td>Detection / حظر</td><td>SHA-256 دقيق</td><td>صفر غموض على الملف بالظبط</td><td>recompile واحد يقتله في صمت</td></tr><tr><td>بحث رجعي في داتا قديمة</td><td>SHA-256 دقيق</td><td>join حتمي على لوجز تاريخية</td><td>بيلاقي النسخة دي بس</td></tr><tr><td>سلامة الأدلة</td><td>SHA-256 (أبداً MD5/SHA-1)</td><td>مقاومة التصادم هي النقطة القانونية</td><td>الخوارزميات المكسورة تتزوّر</td></tr><tr><td>تجميع عيلة وتتبعها</td><td>imphash</td><td>بيعيش عبر الـrebuilds مع نفس الـimports (إثبات PuTTY)</td><td>إعادة ترتيب الـimports بتهزمه (مثال Mandiant)</td></tr><tr><td>اكتشاف variants على نطاق واسع</td><td>ssdeep / TLSH</td><td>مقياس مسافة: بحث بالأقربين</td><td>هجمات حقن محتوى متعمدة</td></tr><tr><td>لما كل الـhashes تتغير</td><td>detection على السلوك / TTPs</td><td>المهاجم مضطر يغير طريقة شغله</td><td>أغلى في البناء والضبط</td></tr></tbody></table></div>
+<h2 id="ch4">الفصل 4: الـ hashes في اللوجز</h2>
+<h3 id="ch4_01">داتا Sysmon مولّدة للتدريب</h3>
+<p>تعالى نشوف الـhash في داتا شكلها حقيقي. الداتا اللي هنشتغل عليها في الفصل ده وفي السادس synthetic، أنا اللي ولّدتها: حوالي خمسة آلاف حدث Sysmon، على خمسة وتلاتين جهاز. ومكتوب على الشاشة synthetic عشان محدش يفتكرها داتا حقيقية.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<p dir="ltr"><strong>5,003 events · 35 hosts</strong></p>
+<p>JSONL · كل الأسماء والـhashes مصنوعة</p>
+<h3 id="ch4_02">Sysmon Event ID 1: process creation</h3>
+<p>ده Sysmon Event ID 1، process creation. الحدث بيسجّل الـImage، يعني مسار الملف، والـCommandLine، والـParentImage، يعني مين شغّل العملية، وكمان الـHashes بتاعة ملف العملية. وبحسب توثيق Microsoft، Sysmon بيحسب الـhash بالـSHA1 كـdefault، وتقدر تختار MD5 أو SHA256 أو IMPHASH، أو كلهم.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<pre dir="ltr"><code>$ head -1 sysmon_synth.jsonl | python3 -m json.tool
+{
+ "_time": "2026-10-20T08:00:00Z",
+ "host": "WS-014",
+ "user": "user9",
+ "EventCode": 1,
+ "Image": "C:\\Program Files\\Teams\\Teams.exe",
+ "ParentImage": "C:\\Windows\\explorer.exe",
+ "CommandLine": "Teams.exe",
+ "Hashes": "SHA256=169AA62AAFE0F3ED153CC37289C83784E0DC3380386230A6612B15C6E18957FF,IMPHASH=052DEAA50B705F7EFCFC77249D7FD6F8",
+ "ProcessGuid": "{d1f409db03ca4093}"
+}</code></pre>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch4_02b">إثبات على جهاز حقيقي: الـ Sysmon hashes في الـ Splunk بتاعي</h3>
+<p>كل اللي فوق داتا synthetic معمولة عشان تبقى واضحة. القسم ده لأ. اللاب بتاعي جهاز Windows 11 واحد (WS01) شغّال عليه Sysmon وبيبعت لـ Splunk على Ubuntu. فرقين صادقين عن الأمثلة المثالية: الـ index عندي اسمه <code>main</code> مش <code>sysmon</code>، وحقل كود الحدث اسمه <code>EventCode</code> مش <code>EventID</code>. الاستعلام زي ما اتنفذ بالظبط:</p>
+<pre dir="ltr"><code>index=main host=WS01 sourcetype=XmlWinEventLog EventCode=1
+| table _time host Image Hashes ProcessGuid
+| head 5</code></pre>
+<figure class="figure"><img src="assets/hashing/lab_a1_sysmon_table.jpg" alt="جدول Sysmon hashes من Splunk اللاب" loading="lazy"><figcaption>شكل 14. لقطة حقيقية من لاب الكاتب: الاستعلام اللي فوق على داتا Sysmon حية (313 حدث). كل صف شايل SHA1 وMD5 وSHA-256 وIMPHASH في حقل Hashes واحد؛ والصفوف المتكررة هي نفس الـ powershell.exe - أول بصّة على الـ prevalence.</figcaption></figure>
+<figure class="figure"><img src="assets/hashing/lab_event_fields.jpg" alt="حقول حدث Sysmon واحد: SHA1 وSHA-256 وSecurityID وSystemTime" loading="lazy"><figcaption>شكل 15. حقول حدث واحد من نفس اللاب: SHA1 يساوي 9B073854... وSHA-256 يساوي 92072004... وSystemTime يساوي 2026-11-28T08:16:31Z. الـ SHA-256 ده هو الملف متعدّل الـ byte من فصل 8 - سلسلة اللاب بتقفل هنا.</figcaption></figure>
+<p class="note">ملاحظة معملية: كل الـ hashes في الصور دي من ملفات تجريبية عند الكاتب (نسخة Notepad++، نسخة متعدّل فيها byte واحد، ملفات evidence معمولة للتجربة). الهدف توضيح الفكرة بس - دي مش IOCs لتهديدات حقيقية، ومحدش المفروض يعمل عليها block أو alert.</p>
+<p>حاجتين يتاخد بالك منهم قبل ما نكمل. أولاً، حقل Hashes عبارة عن string واحد فيه أربعة أنواع hash مع بعض (SHA1 وMD5 وSHA-256 وIMPHASH) - وعشان كده كل استعلام تحت بيبدأ باستخراج <code>rex</code>. ثانياً، الصفوف المتكررة هي نفس الـ powershell.exe اتشغّل كذا مرة: نفس الملف، نفس الـ hashes، وProcessGuid مختلف. التكرار ده هو بالظبط اللي عدّ الـ prevalence (فصل 6) بيحوّله لإشارة.</p>
+<h3 id="ch4_03">الـconfig بيسجّل إيه؟</h3>
+<p>وهنا أول سؤال في أي hunt: الـconfig عندكم بيسجّل إيه؟ لو الـconfig سايب الـdefault، يبقى لوجاتك فيها SHA1 بس، وانت جاي بقايمة IOC كلها SHA-256. هتدوّر وهتقول مفيش حاجة، والحقيقة إنك ببساطة بتقارن حاجتين مختلفتين. الإعداد المقترح هنا: HashAlgorithms يكون SHA256 وIMPHASH.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Per Microsoft docs</th><th>Value</th></tr></thead><tbody><tr><td>Process-image hashes</td><td>SHA1 (the default), MD5, SHA256 or IMPHASH</td></tr><tr><td>HashAlgorithms option</td><td>MD5, SHA1, SHA256, IMPHASH, or * for all</td></tr><tr><td>Your IOC list is SHA-256 but logs only have SHA1</td><td>No match, and no error</td></tr><tr><td>Suggested here</td><td>HashAlgorithms = SHA256 + IMPHASH</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch4_04">ProcessGUID: نربط الأحداث</h3>
+<p>فيه كمان حقل مهم اسمه ProcessGUID. ده قيمة فريدة للعملية الواحدة، وبتفيد جداً في الربط بين الأحداث. يعني تقدر تقول: العملية دي، إيه العمليات اللي طلعت منها، وإيه الاتصالات الشبكية بتاعتها، وإيه مفاتيح الـregistry اللي كتبتها. هنستخدمه بشكل عملي في الفصل السادس.</p>
+<p dir="ltr"><strong>Process (Event 1)  →  Child processes  →  Network (Event 3, TCP/UDP)  →  Registry (Event 13)</strong></p>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch4_05">نفس الملف، أسماء حقول مختلفة</h3>
+<p>نفس الملف ممكن يظهر في أكتر من مصدر. في الـEDR كحدث كتابة ملف، وفي بوابة الإيميل كمرفق، وفي الـproxy كتحميل، وفي Sysmon كعملية. المشكلة إن كل مصدر بيسمّي الحقل باسم مختلف. ده Hashes، وده SHA256، وده file_hash، وده attachment_sha256. وشكل القيمة كمان بيختلف: ممكن تكون كبيرة أو صغيرة، وممكن يكون قبلها اسم الخوارزمية.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<figure class="figure"><img src="assets/hashing/f_norm.png" alt="f_norm" loading="lazy"><figcaption>شكل 16. الـ normalization: Sysmon بيكتب Hashes=SHA256=...، الـ EDR بيكتب SHA256، والـ gateway بيكتب attachment_sha256. لحد ما يبقوا حقل واحد lowercase، الـ lookup مابيماتشش حاجة.</figcaption></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Source</th><th>Field name</th><th>Value shape</th></tr></thead><tbody><tr><td>Sysmon</td><td>Hashes</td><td>SHA256=6D2B…,IMPHASH=…</td></tr><tr><td>EDR file-write</td><td>SHA256</td><td>upper case</td></tr><tr><td>Mail gateway</td><td>attachment_sha256</td><td>lower case</td></tr><tr><td>Proxy</td><td>file_hash</td><td>plain hex</td></tr></tbody></table></div>
+<h3 id="ch4_06">الـnormalization</h3>
+<p>شغل الـdetection engineer هنا إنه يعمل normalization. اسم حقل موحّد، حروف صغيرة، وقيمة من غير prefix. وبعد كده أي IOC بتدوّر بيه، بتدوّر بيه في الحقل الموحّد في كل المصادر مرة واحدة. من غير الخطوة دي، الـmatch بيفوتك، والمشكلة إنك مش هتعرف إنه فاتك.</p>
+<ul><li>اسم حقل موحّد: sha256</li><li>حروف صغيرة</li><li>قيمة من غير prefix</li><li>بحث واحد في كل المصادر</li><li>من غير ده: الـmatch بيفوتك، ومش هتعرف</li></ul>
+<h3 id="ch4_07">حدود الـhash</h3>
+<p>وفيه حد أدنى لازم نقوله بصراحة. الـhash بيتحسب على ملف. لو التنفيذ في الميموري بس، أو الملف اتمسح قبل ما حد يحسبه، مش هتلاقي hash أصلاً. يعني الـhash أداة مفيدة، بس مش شبكة أمان كاملة، وعشان كده الفصول الجاية بتتكلم عن اللي بعده.</p>
+<ul><li>الـhash بيتحسب على ملف</li><li>تنفيذ في الميموري بس = مفيش hash</li><li>الملف اتمسح قبل ما حد يحسبه = مفيش hash</li><li>أداة مفيدة، مش شبكة أمان كاملة</li></ul>
+<h2 id="ch5">الفصل 5: جانب الـ intel</h2>
+<h3 id="ch5_01">IOC section في تقارير حقيقية</h3>
+<p>نتكلم دلوقتي عن جانب الـintel، يعني الناس اللي بتنتج الـIOCs، وإزاي بتتقرأ. أي تقرير فيندور محترم بيبقى في آخره قسم Indicators of Compromise. ولو فتحت تقرير Unit 42 الأخير، هتلاقي القسم ده مقسّم بالـSHA-256 حسب اسم الـmalware ومتغيّره. وتقرير Kaspersky بيقسّمها حسب المكوّن: loader، payload، backdoor. التنظيم ده بيفرق، لأنك تقدر تعرف الـhash ده بيخص أنهي جزء من السلسلة.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Report (read)</th><th>Hash type</th><th>Grouped by</th><th>Count in page text</th></tr></thead><tbody><tr><td>Unit 42, TGR-STA-0049 (Nov 16, 2026)</td><td>SHA-256</td><td>Malware variant</td><td>66 unique</td></tr><tr><td>Securelist, ShadowCloud (Nov 17, 2026)</td><td>MD5</td><td>Component (loaders, payload, backdoors...)</td><td>14 unique</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a><br><a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch5_02">IOC بسياق</h3>
+<p>المحلل بياخد الـIOCs دي من العينة نفسها: hashes، دومينات، عناوين IP، مسارات ملفات، أسماء mutexes. بس الأهم من القيمة نفسها هو السياق اللي بتسجّله جنبها: المصدر، أول مرة اتشاف، درجة الثقة، وتاريخ انتهاء. IOC من غير سياق بيتحول لضوضاء بعد شهرين. وعلى الشاشة مثال بجدول CSV synthetic بالأعمدة دي.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>sha256</th><th>source</th><th>confidence</th><th>added</th><th>expires</th></tr></thead><tbody><tr><td>034f79fa067ff7…</td><td>SYNTHETIC-feed</td><td>high</td><td>2026-11-17</td><td>2027-02-17</td></tr><tr><td>170c5f7b315edf…</td><td>SYNTHETIC-feed</td><td>high</td><td>2026-11-17</td><td>2027-02-17</td></tr><tr><td>771a386f146804…</td><td>SYNTHETIC-feed</td><td>low</td><td>2026-11-17</td><td>2027-02-17</td></tr><tr><td>33be69b8e58373…</td><td>SYNTHETIC-feed</td><td>medium</td><td>2026-11-17</td><td>2027-02-17</td></tr></tbody></table></div>
+<h3 id="ch5_03">CSV و MISP attribute</h3>
+<p>الـIOCs بتتشارك بأكتر من شكل. CSV بسيط، أو STIX، أو منصة زي MISP. وتوثيق MISP بيوصف الـcore format بإنه JSON بسيط لتبادل events وattributes. والـattributes ليها types، منها sha256، ومنها filename مع sha256 في قيمة واحدة. وعلى الشاشة نفس الصف بتاعنا متحوّل لشكل attribute مبسّط، علشان تبقى الصورة واضحة.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<pre dir="ltr"><code>$ head -3 data/ioc_hashes.csv | cut -c1-90
+sha256,source,confidence,added
+034f79fa067ff77b8182ddd1980c24bd2907baa9edf3148658ab7a9eecb52e98,SYNTHETIC-feed,high,2026-11-17
+170c5f7b315edf75cff5d8d8b7111125924fc70e92d61193454ba1096d9ee676,SYNTHETIC-feed,high,2026-11-17
+
+# simplified, MISP-style attribute (SYNTHETIC)
+{"type": "sha256",
+ "value": "034f79fa067ff77b8182...",
+ "comment": "SYNTHETIC-feed, confidence high"}</code></pre>
+<p class="refline">References: <a href="#ref10">[10]</a> MISP data models - <a href="https://www.misp-project.org/datamodels/" target="_blank" rel="noopener">https://www.misp-project.org/datamodels/</a></p>
+<h3 id="ch5_04">صفحة ملف في VirusTotal (شكل توضيحي)</h3>
+<p>وVirusTotal من أشهر الأماكن اللي بتدوّر فيها على hash. الصفحة اللي على الشاشة مكتوب عليها mock-up، يعني أنا اللي رسمتها، مش صفحة حقيقية. فيها التبويبات المعروفة: Detection وDetails وRelations وBehavior وCommunity. والـhash بتبحث بيه بـMD5 أو SHA-1 أو SHA-256، وكلهم بيشتغلوا في خانة البحث حسب توثيقهم.</p>
+<span class="badge badge-active">MOCK-UP drawn by me, not a real VirusTotal page</span>
+<figure class="figure"><img src="assets/hashing/f_vt.png" alt="f_vt" loading="lazy"><figcaption>شكل 17. محاكاة لصفحة ملف VirusTotal، مرسومة للمقال ده (مش صفحة حقيقية): التابات اللي المحلل بيقراها فعلاً - Detection وDetails وRelations وBehavior وCommunity.</figcaption></figure>
+<p dir="ltr"><strong>Detection  →  Details  →  Relations  →  Behavior  →  Community</strong></p>
+<p class="refline">References: <a href="#ref11">[11]</a> VirusTotal docs, VirusTotal Intelligence introduction - <a href="https://docs.virustotal.com/docs/virustotal-intelligence-introduction" target="_blank" rel="noopener">https://docs.virustotal.com/docs/virustotal-intelligence-introduction</a></p>
+<h3 id="ch5_05">تبويب Community</h3>
+<p>تبويب Community مهم. في كل ملف أو URL، فيه قسم للـcomments. وVirusTotal بتشجّع المستخدمين يراجعوا العينات ويعلّقوا عليها، لأن ده بيفيد غيرهم. وفيه tags متفق عليها عشان الكومنتس تتبحث بشكل موحّد. وكمان فيه نظام reputation من سالب مية، يعني خبيث بالكامل، لحد مية، يعني سليم بالكامل. بس خد بالك: الكومنتس دي رأي ناس. اتعامل معاها كـlead مش كحقيقة.</p>
+<ul><li>Comments على كل ملف أو URL</li><li>Tags متفق عليها للبحث</li><li>Reputation: من -100 (خبيث) لـ 100 (سليم)</li><li>رأي ناس: اتعامل معاه كـlead</li></ul>
+<p class="refline">References: <a href="#ref12">[12]</a> VirusTotal docs, Comments - <a href="https://docs.virustotal.com/docs/comments" target="_blank" rel="noopener">https://docs.virustotal.com/docs/comments</a></p>
+<h3 id="ch5_06">Search modifiers في توثيق VirusTotal</h3>
+<p>وفيه أدوات بحث متقدمة. في توثيق VirusTotal للـfile search modifiers، فيه modifier اسمه imphash، بيرجّعلك كل ملفات PE اللي ليها نفس الـimport hash، وفيه ssdeep للملفات الشبيهة. دي بتفيدك لما يكون عندك hash واحد وعايز تلاقي إخواته. ومجرد وجود الـmodifiers دي في التوثيق، مش بيقول لك إنها متاحة في أي حساب. اتأكد من الصلاحيات اللي عندك.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Modifier</th><th>Applies to</th><th>What it returns</th></tr></thead><tbody><tr><td>imphash:</td><td>PE files</td><td>Files with the given import hash (same family candidates)</td></tr><tr><td>ssdeep:</td><td>Any file type</td><td>Files similar to the given ssdeep hash</td></tr></tbody></table></div>
+<p>موجودة في التوثيق ≠ متاحة في كل حساب. اتأكد من صلاحياتك.</p>
+<p class="refline">References: <a href="#ref13">[13]</a> VirusTotal docs, File search modifiers - <a href="https://docs.virustotal.com/docs/file-search-modifiers" target="_blank" rel="noopener">https://docs.virustotal.com/docs/file-search-modifiers</a></p>
+<h3 id="ch5_07">خصوصية</h3>
+<p>وده تحذير شغل مهم، من توثيق VirusTotal نفسه: أي IoC بتبعته أو بتسأل عنه من الواجهة بيتضاف للـdataset، وبيبقى متاح للـcommunity. فمتبعتش حاجة فيها بيانات حساسة أو بيانات شخصية. يعني ملف خاص بالشركة، متترفعش. والـhash لوحده غالباً أخف بكتير، بس راجع سياسة شركتك قبل ما تسأل عن أي حاجة من incident حقيقي.</p>
+<span class="badge badge-active">WARNING</span>
+<p dir="ltr"><strong>Do not submit sensitive data</strong></p>
+<p>أي IoC من الواجهة بيتضاف للـdataset ويبقى متاح للـcommunity</p>
+<p class="refline">References: <a href="#ref11">[11]</a> VirusTotal docs, VirusTotal Intelligence introduction - <a href="https://docs.virustotal.com/docs/virustotal-intelligence-introduction" target="_blank" rel="noopener">https://docs.virustotal.com/docs/virustotal-intelligence-introduction</a></p>
+<h3 id="ch5_08">MalwareBazaar (abuse.ch)</h3>
+<p>مصدر تاني مجاني ومفيد: MalwareBazaar من abuse.ch. دي مشروع بيشارك عينات malware مع مجتمع الأمن، وشركات الـAV، ومزودي الـthreat intel. والـAPI محتاج Auth-Key، وبتاخده مجاناً من auth.abuse.ch. ومعاه مصادر زي الـfeeds المفتوحة اللي بتنزل عليها الـIOCs.</p>
+<ul><li>مشاركة عينات malware مع المجتمع وAV vendors وCTI providers</li><li>الـAPI محتاج Auth-Key</li><li>الـAuth-Key مجاني من auth.abuse.ch</li></ul>
+<p class="refline">References: <a href="#ref14">[14]</a> abuse.ch, MalwareBazaar (GitHub) - <a href="https://github.com/abusech/MalwareBazaar/" target="_blank" rel="noopener">https://github.com/abusech/MalwareBazaar/</a></p>
+<h3 id="ch5_09">قواعد ذهبية</h3>
+<p>قاعدة ذهبية في الـintel: متثقش في مصدر واحد. اتأكد من مصدرين على الأقل. سجّل الـprovenance، يعني مين قال إيه ومتى. حط confidence. وحط expiry، لأن IOC عمره سنة مش زي IOC عمره أسبوع. وفي الفصل السابع هنشوف إن حتى قوايم الفيندورز نفسها ممكن يبقى فيها حاجات مش المفروض تتحظر.</p>
+<ul><li>متثقش في مصدر واحد</li><li>سجّل provenance: مين قال إيه ومتى</li><li>حط confidence</li><li>حط expiry</li></ul>
+<h2 id="ch6">الفصل 6: الـ hunt في الـ SIEM</h2>
+<h3 id="ch6_01">قايمة الـIOC كـlookup</h3>
+<p>وصلنا لجانب الـhunter. عندنا قايمة IOCs من الفيد، وطبعاً synthetic. فيها خمس hashes، ومكتوب جنب كل واحد المصدر ودرجة الثقة. هنحملها كـlookup، ونطابقها على خمسة آلاف حدث Sysmon. لاحظ إن الشاشة مكتوب عليها: SPL-style query، بتتنفذ بمنطق Python مكافئ، لأن Splunk نفسه مش متاح عندي. والنتايج اللي هتشوفها ناتج تنفيذ فعلي، مش مرسومة.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<pre dir="ltr"><code>$ cut -c1-18,65- data/ioc_hashes.csv
+sha256,source,conf…d
+034f79fa067ff77b81…,SYNTHETIC-feed,high,2026-11-17
+170c5f7b315edf75cf…,SYNTHETIC-feed,high,2026-11-17
+771a386f1468040bfb…,SYNTHETIC-feed,low,2026-11-17
+33be69b8e58373d32e…,SYNTHETIC-feed,medium,2026-11-17
+0f7639d585cafecdaf…,SYNTHETIC-feed,medium,2026-11-17</code></pre>
+<h3 id="ch6_02">الاستعلام</h3>
+<p>الاستعلام بيعمل ثلاث حاجات. أولاً بيستخرج الـSHA256 من حقل Hashes بـregex. تانياً بيحوّله لحروف صغيرة عشان يتطابق مع الـlookup، وده بالظبط جزء الـnormalization من الفصل الرابع. وتالتاً بيعمل join مع قايمة الـIOC ويطلّع الـmatches بس.</p>
+<span class="badge badge-active">SPL-style · run by equivalent Python logic · SYNTHETIC</span>
+<pre dir="ltr"><code>SPL-style (executed here by equivalent Python logic):
+
+index=sysmon EventCode=1
+| rex field=Hashes "SHA256=(?&lt;sha256&gt;[A-Fa-f0-9]{64})"
+| eval sha256=lower(sha256)
+| lookup ioc_hashes sha256 OUTPUT source confidence
+| where isnotnull(source)</code></pre>
+<h3 id="ch6_03">638 صف match. إيه ده؟</h3>
+<p>نتيجة التنفيذ: ستمية وتمانية وتلاتين صف match. رقم كبير، وأكيد مش ستمية وتمانية وتلاتين اختراق. ده أول درس حقيقي: الـhunter ميبصّش على العدد، بيبص على التوزيع. لما جمّعت الصفوف حسب الـhash، لقيت حاجتين: صفين بس بـconfidence high، وستمية وستة وتلاتين صف على hash واحد بـconfidence low، موزعين على الخمسة وتلاتين جهاز كلهم.</p>
+<span class="badge badge-active">Real output of the equivalent logic · SYNTHETIC DATA</span>
+<figure class="figure"><img src="assets/hashing/f_dist.png" alt="f_dist" loading="lazy"><figcaption>شكل 18. 638 match على hash واحد، بمقياس log (داتا synthetic): صفوف الثقة العالية واحد لكل منهما، وأداة الإدارة السليمة وحدها عاملة 636 match منخفضة الثقة على الـ 35 جهاز. الكم مش حكم.</figcaption></figure>
+<figure class="figure"><img src="assets/hashing/hunt_funnel.gif" alt="animation" loading="lazy"><figcaption>شكل 19. قمع الـ hunt متحرك: من كومة الـ matches الخام لنتايج محددة النطاق ومؤكدة.</figcaption></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Group (by sha256)</th><th>Rows</th><th>Hosts</th><th>Confidence</th></tr></thead><tbody><tr><td>hash A: C:\Users\...\Temp\upd_svc.exe</td><td>1</td><td>1</td><td>high</td></tr><tr><td>hash B: C:\ProgramData\vmsync\vmsync.exe</td><td>1</td><td>1</td><td>high</td></tr><tr><td>hash C: C:\Program Files\AdminTools\remotehelp.exe</td><td>636</td><td>35</td><td>low</td></tr></tbody></table></div>
+<p>ما تبصّش على العدد. بص على التوزيع.</p>
+<h3 id="ch6_04">الـhash اللي على كل الأجهزة</h3>
+<p>الـhash اللي على الخمسة وتلاتين جهاز طلع ملف remotehelp.exe، جاي من Program Files، وده أداة إدارة داخلية في الداتا الـsynthetic. يعني ده dual-use أو إدخال غلط في الفيد. القرار هنا مش بالـhash لوحده: بنبص على المسار، والـparent، والـcommand line، وهل الأداة دي معروفة عندنا. وفي الغالب بنعمل لها exception، وبنبلّغ مصدر الفيد، ونخفّض أولويتها.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Check</th><th>Finding</th></tr></thead><tbody><tr><td>Path</td><td>C:\Program Files\AdminTools\ (not Temp/AppData)</td></tr><tr><td>Parent</td><td>services.exe</td></tr><tr><td>Known internal tool?</td><td>Yes (in this synthetic scenario)</td></tr><tr><td>Decision</td><td>Exception + tell the feed owner + lower priority</td></tr></tbody></table></div>
+<h3 id="ch6_05">الصف الأول: WS-014</h3>
+<p>نرجع للصفين الـhigh. الأول: جهاز WS-014، المستخدم user7، الملف upd_svc.exe، شغال من AppData Local Temp، والـparent بتاعه برنامج Word. ده سياق مقلق بكتير، لأن Word مش المفروض يشغّل exe من Temp. المطابقة قالت لنا إيه الملف، والسياق قال لنا إنه مهم.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Time</td><td>2026-11-02 14:12:07Z</td></tr><tr><td>Host / user</td><td>WS-014 / user7</td></tr><tr><td>Image</td><td>C:\Users\user7\AppData\Local\Temp\upd_svc.exe</td></tr><tr><td>Parent</td><td>WINWORD.EXE</td></tr><tr><td>IOC confidence</td><td>high</td></tr></tbody></table></div>
+<h3 id="ch6_06">ProcessGUID على Pivot</h3>
+<p>هنستخدم الـProcessGUID نعمل pivot. العمليات اللي طلعت من upd_svc.exe: عملية cmd واحدة بتشغّل whoami بالـall، بعد ثلاث دقايق تقريباً. الاتصالات الشبكية، Sysmon Event 3: اتصالين UDP على بورت ٤٤٣ لعنوان ١٩٨ نقطة ٥١ نقطة ١٠٠ نقطة ٢٣. وده عنوان من النطاق المخصص للتوثيق، يعني مش عنوان حقيقي. وUDP على ٤٤٣ بيفكّر بـQUIC، وهنشوف في الفصل السابع ليه ده مهم.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<pre dir="ltr"><code># pivot on ProcessGuid {a1b2c3d4e5f60718} (query logic run on the synthetic events)
+EID 1   cmd.exe /c whoami /all       (child, +3 min)
+EID 3   udp -&gt; 198.51.100.23:443   (198.51.100.0/24 = documentation range)
+EID 3   udp -&gt; 198.51.100.23:443   (198.51.100.0/24 = documentation range)
+EID 13  Updater -&gt; Run key  (persistence)</code></pre>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch6_07">السلسلة كاملة</h3>
+<p>والـpersistence: Sysmon Event 13، كتابة في مفتاح Run في الـregistry بالاسم Updater، بيشاور على نفس الملف في Temp. كده عندنا سلسلة كاملة: Word شغّل الملف، الملف سأل عن هوية المستخدم، اتصل بالخارج على UDP، وكتب نفسه في الـRun. ده أقوى بكتير من أي match لـhash.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<figure class="figure"><img src="assets/hashing/f_chain.png" alt="f_chain" loading="lazy"><figcaption>شكل 20. سلسلة العمليات المسترجعة بالـ pivot على ProcessGuid (داتا synthetic): WINWORD بيشغّل upd_svc.exe، whoami بعدها بتلات دقايق، UDP 443 خارجي، وبعدين Run key. الـ hash لقى أول صف؛ السلسلة بتحكي القصة.</figcaption></figure>
+<p class="refline">References: <a href="#ref5">[5]</a> Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></p>
+<h3 id="ch6_08">الصف التاني: SRV-03</h3>
+<p>الصف التاني: جهاز SRV-03، حساب svc_backup، ملف vmsync.exe من ProgramData، والـparent هو services.exe. يعني شغّال كخدمة. ده يحتاج تحقيق مختلف: إيه الخدمة دي؟ مين نصّبها؟ وهل في change ticket؟ ومن غير سياق إضافي مش هنقدر نقول إنه خبيث، بس هو على الأقل ملف عليه IOC بثقة عالية.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Time</td><td>2026-11-09 03:40:00Z</td></tr><tr><td>Host / account</td><td>SRV-03 / svc_backup</td></tr><tr><td>Image</td><td>C:\ProgramData\vmsync\vmsync.exe</td></tr><tr><td>Parent</td><td>services.exe (runs as a service)</td></tr><tr><td>To ask</td><td>Who installed it? Is there a change ticket?</td></tr></tbody></table></div>
+<h3 id="ch6_09">Retro-hunt</h3>
+<p>وفيه حاجة الـretro-hunt. الـIOC اتضاف للفيد يوم ١٧ نوفمبر. لكن النشاط على WS-014 كان يوم ٢ نوفمبر، يعني قبلها بخمستاشر يوم. والنشاط على SRV-03 يوم ٩ نوفمبر، يعني قبلها بتمانية أيام. لو كنا بندوّر على الداتا الجديدة بس، كنا هنفوّت الاتنين. عشان كده الـIOC الجديد بيتدوّر بيه على الداتا القديمة كمان.</p>
+<span class="badge badge-active">SYNTHETIC DATA</span>
+<figure class="figure"><img src="assets/hashing/f_retro.png" alt="f_retro" loading="lazy"><figcaption>شكل 21. الخط الزمني للـ retro-hunt (داتا synthetic): الـ IOC دخل الـ feed يوم 17 نوفمبر، لكن النشاط حصل يوم 2 و9. اللي بيدوّر في الجديد بس بيفوّت الاتنين.</figcaption></figure>
+<h3 id="ch6_10">بعد الـhunt</h3>
+<p>وبعد ما تخلّص: تحدد النطاق، يعني كام جهاز ومين المستخدمين. تعمل containment. تجمع أي hashes أو دومينات جديدة لقيتها وترجّعها للـintel، عشان الدايرة تكمل. وتكتب كل ده مع الـconfidence، وإيه المؤكد وإيه الاستنتاج. ده شغل الـhunter الحقيقي.</p>
+<p dir="ltr"><strong>Scope (hosts, users)  →  Containment  →  New hashes/domains back to intel  →  Write-up with confidence</strong></p>
+<h3 id="ch6_11">نفس الـ hunt، لايف في الـ Splunk بتاعي</h3>
+<p>الـ hunt اللي فوق اتعمل على داتا synthetic. فشغّلت اللفة كلها تاني، لايف، على اللاب من فصل 4 - باختيار مقصود: الـ IOC ملف أنا صاحبه. حسبت الـ hash بتاع نسخة Notepad++ عندي، وحطيته في <code>ioc_hashes.csv</code> بخطوة تجهيز لمرة واحدة (<code>makeresults</code> + <code>outputlookup</code>) متسمّية <em>Lab Test IOC - Notepad++ demo</em>، وشغّلت الملف عشان Sysmon يسجّله، ودوّرت في آخر 24 ساعة:</p>
+<pre dir="ltr"><code>index=main EventCode=1 earliest=-24h
+| rex field=Hashes "SHA256=(?&lt;sha256&gt;[A-Fa-f0-9]{64})"
+| eval sha256=upper(sha256)
+| lookup ioc_hashes.csv sha256 OUTPUT source
+| where isnotnull(source)
+| table _time host Image sha256 source</code></pre>
+<figure class="figure"><img src="assets/hashing/lab_a2_ioc_lookup.jpg" alt="نتيجة الـ IOC lookup في Splunk اللاب" loading="lazy"><figcaption>شكل 22. الـ IOC lookup لايف: الـ hash بتاع نسخة Notepad++ بتاعة الكاتب، محمّل في ioc_hashes.csv، بيماتش صفوف متسمّية 'Lab Test IOC - Notepad++ demo'. خد بالك من صفوف XmlWinEventLog:System المتناوبة - بَج تعارض الحقول مشروح تحت.</figcaption></figure>
+<p class="note">ملاحظة معملية: كل الـ hashes في الصور دي من ملفات تجريبية عند الكاتب (نسخة Notepad++، نسخة متعدّل فيها byte واحد، ملفات evidence معمولة للتجربة). الهدف توضيح الفكرة بس - دي مش IOCs لتهديدات حقيقية، ومحدش المفروض يعمل عليها block أو alert.</p>
+<h3 id="ch6_12">بَجين حقيقيين الصور بتاعتي كشفتهم</h3>
+<p>بص كويس على جدول الـ match: كل صف تاني مكتوب فيه <em>XmlWinEventLog:System</em> بدل اسم الـ IOC. ده تعارض حقول مكنتش مخطط له: الـ lookup بيكتب النتيجة في حقل اسمه <code>source</code>، لكن Splunk أصلاً بيستخدم <code>source</code> كـ metadata جاهزة على كل event، ومش بيبقى فاضي أبداً. يعني <code>where isnotnull(source)</code> بيعدّي كل حاجة، ماتش ولا لأ. الحل إنك تغيّر اسم مخرجات الـ lookup:</p>
+<pre dir="ltr"><code>index=main EventCode=1 earliest=-24h
+| rex field=Hashes "SHA256=(?&lt;sha256&gt;[A-Fa-f0-9]{64})"
+| eval sha256=upper(sha256)
+| lookup ioc_hashes.csv sha256 OUTPUT source AS ioc_source
+| where isnotnull(ioc_source)
+| table _time host Image sha256 ioc_source</code></pre>
+<p>البَج التاني في السطر الأول: <code>index=main EventCode=1</code> من غير sourcetype بيجيب كمان الـ Event ID 1 بتاع Windows System log - دول صفوف الـ match اللي عمود Image فيها فاضي. استعلام فصل 4 كان عنده العادة الصح: ثبّت الـ sourcetype (<code>sourcetype=XmlWinEventLog</code> أو اسم الـ sourcetype الحقيقي عندك) عشان رقم واحد ما يسحبش لوج تاني. البَجين ظاهرين في صوري أنا نفسي، ودي النقطة الصادقة في الفصل ده: جرّب الـ detections بتاعتك على الـ telemetry بتاعتك قبل ما تثق فيها.</p>
+<h3 id="ch6_13">الـ prevalence والـ retro-hunt والـ imphash، لايف</h3>
+<p>استعلام الـ prevalence بيعدّ الأجهزة المختلفة لكل hash - إشارة الندرة من فصل 6 على داتا حقيقية:</p>
+<pre dir="ltr"><code>index=main EventCode=1
+| rex field=Hashes "SHA256=(?&lt;sha256&gt;[A-Fa-f0-9]{64})"
+| stats dc(host) as machines values(host) as hosts by sha256
+| sort - machines
+| head 10</code></pre>
+<figure class="figure"><img src="assets/hashing/lab_a3_prevalence.jpg" alt="انتشار الـ hash عبر الأجهزة في Splunk اللاب" loading="lazy"><figcaption>شكل 23. الانتشار عبر الأجهزة: dc(host) لكل SHA-256. اللاب ده فيه جهاز واحد بيبعت (WS01)، فكل عدد طالع 1 - متوقع هنا؛ على أسطول حقيقي العمود ده هو إشارة الندرة.</figcaption></figure>
+<p>الـ retro-hunt بيضيف خط زمني: نفس الـ lookup، وبعدين <code>timechart span=1d count by source</code>، عشان الـ IOC الجديد يتدوّر في الداتا الأديمة وتاريخه يبان يوم بيوم.</p>
+<figure class="figure"><img src="assets/hashing/lab_a4_retrohunt.jpg" alt="الـ retro-hunt timechart في Splunk اللاب" loading="lazy"><figcaption>شكل 24. ميكانيكا الـ retro-hunt: الـ IOC lookup داخل على timechart span=1d count by source. التشغيلة دي على نافذة زمنية قصيرة مش 30 يوم - شكل الرسم هو الدرس؛ على داتا حقيقية هنا مكان ما الـ IOC الأديم بيبان تاريخه.</figcaption></figure>
+<p>والـ imphash pivot بيجمّع عمليات التشغيل بالـ structural hash بدل الـ exact:</p>
+<pre dir="ltr"><code>index=main EventCode=1
+| rex field=Hashes "IMPHASH=(?&lt;imphash&gt;[A-Fa-f0-9]{32})"
+| where isnotnull(imphash)
+| stats values(Image) as images dc(host) as machines by imphash
+| sort - machines
+| head 10</code></pre>
+<figure class="figure"><img src="assets/hashing/lab_a5_imphash.jpg" alt="الـ imphash pivot في Splunk اللاب" loading="lazy"><figcaption>شكل 25. الـ imphash pivot: عمليات التشغيل متجمعة بالـ structural hash. صف واحد هنا - Notepad++ بـ BFEF1DC1... - لأن اللاب جهاز واحد، لكن الاستعلام هو اللي بتشغّله على أسطول.</figcaption></figure>
+<p>ملاحظات نطاق صادقة: اللاب ده فيه جهاز واحد بيبعت، فكل عدّاد <code>machines</code> طالع 1 - المهم هنا الميكانيكا مش حجم الأرقام. وصورة الـ retro-hunt متصوّرة على نافذة زمنية قصيرة مش 30 يوم كاملين، فهي بتوري الاستعلام وشكل الرسم، مش شهر تاريخ.</p>
+<h2 id="ch7">الفصل 7: دراسة حالة: الـ correlation بين Unit 42 وShadowCloud</h2>
+<h3 id="ch7_01">حالة دراسية: حملة حديثة</h3>
+<p>دلوقتي الجزء العملي: حالة دراسية على حملة حديثة. عندنا تقريرين من فيندورين مختلفين في نفس الأسبوع. الأول Unit 42، اتنشر ١٦ نوفمبر ٢٠٢٦، عن مجموعة بيتتبعوها باسم TGR-STA-0049، وليها أسماء تانية عند فيندورز تانيين: REF7707 وEarth Alux وInk Dragon. والتاني من Kaspersky، اتنشر ١٧ نوفمبر، اسمه Operation ShadowCloud. وكل المعلومات اللي هتسمعها من التقريرين دول، ومكتوب مصدرها على الشاشة، ومش هنعيد نشر الـhashes الحقيقية، بس هنشير لها.</p>
+<span class="badge badge-active">Public reports, cited · real hashes not re-hosted</span>
+<p dir="ltr"><strong>TGR-STA-0049 + Operation ShadowCloud</strong></p>
+<p>Unit 42 (Nov 16, 2026) و Kaspersky (Nov 17, 2026)</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a><br><a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_02">مين TGR-STA-0049؟</h3>
+<p>نبدأ بمين دول. TGR-STA-0049 حسب Unit 42 نشطة على الأقل من مارس ٢٠٢٣، وبتستهدف حكومات في جنوب شرق آسيا وأمريكا الجنوبية وأوروبا. قبل كده استخدمت backdoor اسمه Squidoor. وفي الحملة الأخيرة، من منتصف ٢٠٢٥، ظهرت عندهم عيلتين malware جداد: PerfectPioneer RAT، اتشافت في يوليو ٢٠٢٥، وخليفتها المعيارية KUKURAT، اللي اتشافت من مارس ٢٠٢٦.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Fact (per Unit 42)</th><th>Value</th></tr></thead><tbody><tr><td>Also tracked as</td><td>REF7707, Earth Alux, Ink Dragon</td></tr><tr><td>Active since</td><td>At least March 2023</td></tr><tr><td>Targets</td><td>Government: SE Asia, South America, Europe</td></tr><tr><td>Earlier backdoor</td><td>Squidoor (FINALDRAFT)</td></tr><tr><td>Current campaign</td><td>PerfectPioneer RAT (Jul 2025), KUKURAT (Mar 2026)</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_03">الدخول للشبكة</h3>
+<p>الدخول للشبكة: حسب Unit 42، الطريق الأساسي هو استغلال سيرفرات Exchange وسيرفرات ويب غير محدّثة، وزرع web shells، منها ASPXSpy وGodzilla وSuo5. والطريق التاني هو الـphishing، بملفات PDF مضللة ودومينات شبه مواقع حكومية. وده أول درس: الـhash بتاع أي ملف من دول مش هيحميك. اللي هيحميك هو الـpatching، والمراقبة على الـweb shells.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Vector</th><th>Details (per Unit 42)</th></tr></thead><tbody><tr><td>Primary</td><td>Exploit unpatched Exchange / web servers, drop web shells (ASPXSpy, Godzilla, Bysunue.aspx, Suo5)</td></tr><tr><td>Secondary</td><td>Phishing: decoy PDFs, look-alike government domains</td></tr></tbody></table></div>
+<p>الـhash بتاع ملف منهم مش هيحميك. الـpatching والمراقبة هي اللي بتحمي.</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_04">PerfectPioneer RAT</h3>
+<p>نيجي للـmalware. PerfectPioneer مكتوب بلغة Go، واتشاف منه ستة متغيرات، بأسماء زي newhttp3 وPerfectRat وPioneer. بيتشغّل بتلات طرق: DLL side-loading، يعني ملف سليم متعدل ومعاه DLL خبيث، أو decoy installer بيشغّل مثلاً installer لـGlobalProtect عشان يغطي على التشغيل، أو phishing بملف متنكر بأيقونة PDF. وبيتواصل مع الـC2 بـHTTP/3، وبيرجع لـHTTP/2 لو فشل.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Aspect</th><th>Per Unit 42</th></tr></thead><tbody><tr><td>Language</td><td>Go</td></tr><tr><td>Variants</td><td>Six: newhttp3, PerfectRat, Pioneer, RatAAkk-tt, rat_http3_ls, rat_http3_cc</td></tr><tr><td>Execution</td><td>DLL side-loading · decoy installers · phishing with PDF-icon executables</td></tr><tr><td>C2</td><td>HTTP/3, falls back to HTTP/2</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_05">نقطة الـcorrelation</h3>
+<p>وفيه نقطة بتفيدنا في الـcorrelation بالذات. Unit 42 بتقول إن الـURL endpoints اللي بيستخدمها PerfectPioneer، زي register وheartbeat وtasks وresult، هي نفسها اللي استخدمها KUKURAT بعد كده، وده دليل بيربط العيلتين بخط تطوير واحد. شوف الفرق: الـhashes اتغيّرت بين العيلتين بالكامل، لكن سلوك الـC2 ظل زي ما هو. ده مثال حي على إن التتبع بالسلوك بيعمّر أكتر من الـhash.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>PerfectPioneer (newhttp3) C2 endpoint</th><th>Usage</th></tr></thead><tbody><tr><td>/agent/register</td><td>Register a new agent</td></tr><tr><td>/agent/heartbeat</td><td>Heartbeat to C2</td></tr><tr><td>/agent/tasks</td><td>Get tasks</td></tr><tr><td>/agent/result</td><td>Send task result</td></tr></tbody></table></div>
+<p>Unit 42: نفس الـendpoints بيستخدمها KUKURAT. الـhashes اتغيّرت، السلوك لا.</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_06">KUKURAT</h3>
+<p>KUKURAT مكتوب بـC++، وهو إطار modular بالكامل. كل قدراته تقريباً بتتحمّل كـDLL modules من الـC2 مباشرة في الميموري وقت الحاجة، وبيدعم على الأقل اتناشر module. معناه إن الملف الأساسي نفسه مفيهوش كود القدرات المتقدمة. وده يربط بالفصل الرابع: لو الـmodule اتحمّل في الميموري بس ومحصلش له كتابة على القرص، مفيش hash ملف تحسبه. هنا بتحتاج EDR وmemory analysis، مش بس IOC lists.</p>
+<ul><li>C++ · modular بالكامل</li><li>12+ DLL modules بتتحمّل من الـC2 في الميموري</li><li>الملف الأساسي مفيهوش كود القدرات المتقدمة</li><li>بدون كتابة على القرص = مفيش file hash</li></ul>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_07">Heuristic camouflage engine</h3>
+<p>ومن الحاجات اللي ذكرها التقرير: KUKURAT عنده heuristic camouflage engine، بيولّد نشاط شكله عادي على التلات محاور: الشبكة، والـregistry، والملفات. يعمل عشرة طلبات HTTP وهمية لدومينات مشهورة، ويكتب ويقرا ويمسح مفتاح شبه بتاع Chrome، وينشئ ملفات مؤقتة عشوائية في temp ويمسحها فوراً. يعني جزء من اللي بتشوفه في اللوجز، ضوضاء مقصودة.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Axis</th><th>Per Unit 42</th></tr></thead><tbody><tr><td>Network</td><td>10 decoy HTTP requests per cycle to a hard-coded list of 15 popular sites</td></tr><tr><td>Registry</td><td>Mimics Chrome browser activity (write, read back, delete)</td></tr><tr><td>Files</td><td>Random temp files created and deleted immediately</td></tr></tbody></table></div>
+<p>جزء من اللي بتشوفه في اللوجز: ضوضاء مقصودة.</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_08">بعد الدخول</h3>
+<p>بعد ما يدخل: الحركة الجانبية. Unit 42 بتقول إن أبرز طريقة هي التلاعب بـdomain log-on scripts. بعد ما يخترق الـdomain controller، بيركّب log-on script خبيث، فكل مستخدم يسجّل دخول، السكريبت يشتغل ويحمّل KUKURAT. وكمان بيستخدم PsExec وWMI وWinRM. والـcredentials بيسرقها بـdump لـLSASS عن طريق comsvcs.dll، وبـDCSync، وأدوات زي Mimikatz وProcDump وSharpDPAPI.</p>
+<p dir="ltr"><strong>Compromise the domain controller  →  Malicious log-on script  →  Runs when users log on  →  Downloads KUKURAT</strong></p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_09">الاستخراج والإيميلات</h3>
+<p>وفي الاستخراج: ملفات PDF وDOCX وXLSX وPNG، وبيستهدف الإيميلات كمان. من سيرفر Exchange بيشغّل أوامر PowerShell يدوّر بيها على حسابات عندها ApplicationImpersonation، ولو ملقاش، بيعمل loop على كل الـmailboxes ويدّي حساب مخترق FullAccess. وده بالظبط اللي نقدر نحوّله لـdetection على السلوك.</p>
+<ul><li>PDF · DOCX · XLSX · PNG</li><li>فحص حسابات ApplicationImpersonation على Exchange</li><li>لو مفيش: FullAccess على كل الـmailboxes بـloop</li><li>نحوّله لـdetection على السلوك</li></ul>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_10">خطوات الـcorrelation</h3>
+<p>نجمع. الخطوة الأولى: الجمع. بنجمع كل التقارير عن الحملة، وبنسجّل المصدر والتاريخ والرابط. الخطوة التانية: الاستخراج. تقرير Unit 42 فيه ٦٦ SHA-256 مجمّعين حسب المتغير. وتقرير Kaspersky فيه MD5، مجمّعين حسب المكوّن. وبنسجّلهم في جدول واحد: النوع، العيلة، المكوّن، المصدر، التاريخ، الثقة.</p>
+<figure class="figure"><img src="assets/hashing/f_workflow.png" alt="f_workflow" loading="lazy"><figcaption>شكل 26. خطوات الـ correlation الستة المستخدمة في فصل 7: تجميع التقارير، استخراج الـ IOCs، الـ overlap، تكتيكات ATT&CK، detections سلوكية، والثقة والفجوات.</figcaption></figure>
+<p dir="ltr"><strong>1. Collect (sources + dates + URLs)  →  2. Extract 66 SHA-256 / 14 MD5  →  3. Normalize one table</strong></p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a><br><a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_11">مشكلة حقيقية</h3>
+<p>ومشكلة حقيقية هنا: SHA-256 في تقرير، وMD5 في تقرير. مينفعش تعمل join مباشر. الحل إنك تجيب باقي الـhashes للملفات دي من مصدر زي VirusTotal أو MalwareBazaar، وتوحّد على SHA-256. وده بيحتاج حساب وAPI Key، وبالحذر اللي قلناه: متبعتش حاجة حساسة لمصادر عامة. وأنا في المقال ده ما عملتش الخطوة دي على الـhashes الحقيقية.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Report</th><th>Hash type</th><th>Length</th></tr></thead><tbody><tr><td>Unit 42</td><td>SHA-256</td><td>64 hex chars</td></tr><tr><td>Securelist</td><td>MD5</td><td>32 hex chars</td></tr></tbody></table></div>
+<p>مفيش join مباشر. الحل: enrich لـSHA-256 من VirusTotal أو MalwareBazaar. (ما عملتهاش على الـhashes الحقيقية هنا.)</p>
+<h3 id="ch7_12">الـoverlap</h3>
+<p>الخطوة التالتة: الـoverlap. بنقارن التقريرين. الاتنين بيستهدفوا حكومات في آسيا. الاتنين بيستخدموا DLL side-loading. بس طريقة الدخول مختلفة: Unit 42 بتقول استغلال Exchange وweb shells، وKaspersky بتقول إن نقطة الدخول مش معروفة بالظبط. والـC2 مختلف: HTTP/3 في واحد، وSharePoint وGitHub وAbly في التاني. ومن اللي قريته، مفيش IOC مشترك مذكور بين التقريرين، ومفيش تقرير بيقول إن الحملتين لنفس الفاعل.</p>
+<figure class="figure"><img src="assets/hashing/f_venn.png" alt="f_venn" loading="lazy"><figcaption>شكل 27. الـ overlap بين التقريرين: الأسلوب المشترك في النص، والسطر الصادق تحت - مفيش IOCs مشتركة مذكورة، ومفيش رابط بين الجهتين مذكور. أسلوب مشابه مش إثبات.</figcaption></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th></th><th>Unit 42</th><th>Securelist</th></tr></thead><tbody><tr><td>Targets</td><td>Gov: SE Asia (+ S. America, Europe)</td><td>Asia and Africa, mostly gov</td></tr><tr><td>DLL side-loading</td><td>Yes</td><td>Yes (start.exe, javaw.exe, pythonw.exe + loaders)</td></tr><tr><td>C2</td><td>HTTP/3 (QUIC)</td><td>SharePoint, GitHub, Ably</td></tr><tr><td>Entry</td><td>Exchange exploits, phishing</td><td>Unknown (MeshAgent)</td></tr><tr><td>Shared IOCs stated</td><td>None</td><td>None</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a><br><a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_13">الاستنتاج الأمين</h3>
+<p>وKaspersky بتقول إن الجزء التاني من تقريرها هيفحص دلائل ارتباط بمجموعات ناطقة بالصيني. فالاستنتاج الأمين: تشابه في الأسلوب، مش إثبات إنهم نفس الجهة. والـanalyst الكويس بيكتب confidence، وبيكتب إيه اللي ناقص عشان يرفعها: مثلاً إن يتأكد overlap في البنية التحتية، أو في الكود، أو في أسماء المشاريع.</p>
+<ul><li>تشابه في الأسلوب</li><li>مش إثبات إنهم نفس الجهة</li><li>Kaspersky: الجزء التاني هيفحص ارتباط بمجموعات ناطقة بالصيني</li><li>اكتب confidence وإيه اللي ناقص</li></ul>
+<p class="refline">References: <a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_14">IOC lists فيها ملفات سليمة</h3>
+<p>ونقطة مهمة في الـIOC lists: قايمة Kaspersky فيها قسم اسمه Legitimate executables، يعني hashes لملفات سليمة زي Sandboxie start.exe وJava وPython، اللي استخدمها المهاجم في الـside-loading. لو حطيت الـhashes دي في blocklist، هتوقف برامج شرعية. فكل IOC لازم يتقرا بالسياق، مش بس يتنسخ.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Securelist section: "Legitimate executables"</th><th>Why it is there</th></tr></thead><tbody><tr><td>javaw.exe (OpenJDK)</td><td>Used for DLL side-loading</td></tr><tr><td>start.exe (Sandboxie)</td><td>Used for DLL side-loading</td></tr><tr><td>pythonw.exe (Python)</td><td>Used for DLL side-loading</td></tr></tbody></table></div>
+<p>لو حطيتهم في blocklist هتوقف برامج شرعية.</p>
+<p class="refline">References: <a href="#ref9">[9]</a> Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></p>
+<h3 id="ch7_15">ربط بـMITRE ATT&amp;CK (أسماء الـtactics بس)</h3>
+<p>الخطوة الرابعة: الربط بـMITRE ATT&amp;CK، بأسماء الـtactics. الـweb shells على Exchange: Initial Access وPersistence. الـDLL side-loading: Defense Evasion. الـlog-on scripts وPsExec وWMI وWinRM: Lateral Movement. الـLSASS dump والـDCSync: Credential Access. أوامر الـExchange للإيميلات: Collection. والـC2 على HTTP/3: Command and Control. وأنا هنا بذكر أسماء الـtactics بس، ومش بكتب technique IDs، عشان ما اتحققتش منها.</p>
+<figure class="figure"><img src="assets/hashing/f_tactics.png" alt="f_tactics" loading="lazy"><figcaption>شكل 28. أسماء تكتيكات ATT&CK المذكورة في تقرير Unit 42 زي ما هي (أسماء tactics بس، من غير ادعاء technique IDs).</figcaption></figure>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Behavior (Unit 42)</th><th>Tactic</th></tr></thead><tbody><tr><td>Web shells on Exchange</td><td>Initial Access / Persistence</td></tr><tr><td>DLL side-loading</td><td>Defense Evasion</td></tr><tr><td>Log-on scripts, PsExec, WMI, WinRM</td><td>Lateral Movement</td></tr><tr><td>LSASS dump, DCSync</td><td>Credential Access</td></tr><tr><td>Exchange mailbox permissions</td><td>Collection</td></tr><tr><td>C2 over HTTP/3</td><td>Command and Control</td></tr></tbody></table></div>
+<p>Technique IDs مش معروضة: ما اتحققتش منها.</p>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_16">Detections مش معتمدة على hash</h3>
+<p>والخطوة الخامسة: نحوّل ده لـdetections مش معتمدة على hash. مثلاً rundll32 مع comsvcs.dll على lsass. UDP على بورت ٤٤٣ خارج من سيرفر ملوش سبب يستخدم QUIC، وUnit 42 بتقول إن بعض الـfirewalls القديمة مش بتفحص UDP زي TCP. تغيير في log-on scripts على الـdomain controller. وأوامر Exchange اللي بتدوّر على ApplicationImpersonation أو بتعمل Add-MailboxPermission في loop. وملف سليم الشكل بيحمّل DLL من مسار غير متوقع.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Idea</th><th>Source</th></tr></thead><tbody><tr><td>rundll32 + comsvcs.dll against lsass</td><td>Unit 42</td></tr><tr><td>UDP/443 outbound from a server with no reason for QUIC</td><td>Unit 42</td></tr><tr><td>New or changed log-on scripts on a DC</td><td>Unit 42</td></tr><tr><td>Exchange: ApplicationImpersonation checks, Add-MailboxPermission loop</td><td>Unit 42</td></tr><tr><td>Signed binary loading a DLL from an unexpected path</td><td>Unit 42 / Securelist</td></tr></tbody></table></div>
+<p class="refline">References: <a href="#ref4">[4]</a> Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></p>
+<h3 id="ch7_17">اكتب نواقصك</h3>
+<p>والخطوة الأخيرة: اكتب confidence ونواقصك. إيه المؤكد من التقارير؟ إيه اللي استنتاجك؟ إيه اللي محتاج مصدر تاني؟ وده اللي بيخلّي الـwrite-up بتاعك على الـportfolio شكله شغل محلل حقيقي، مش مجرد نسخ ولصق من تقارير الفيندورز.</p>
+<div class="tbl" dir="ltr"><table><thead><tr><th>Confirmed in reports</th><th>My inference</th><th>Needs another source</th></tr></thead><tbody><tr><td>Both target Asian governments; both use DLL side-loading</td><td>Similar tradecraft</td><td>Shared infrastructure / code</td></tr><tr><td>No shared IOCs stated</td><td>Not proven same actor</td><td>Securelist part 2 attribution analysis</td></tr></tbody></table></div>
+<h2 id="chEV">الفصل 8: الـ evasion - إزاي المهاجم بيهزم الـ exact hash</h2>
+<p>الـ avalanche effect أداة المدافع ومشكلته في نفس الوقت: لو bit واحد متغيّر بيطلّع hash ملوش علاقة بالأولاني، يبقى مهاجم غيّر byte واحد بس قدّر يتقاعد كل exact-hash IOC اتكتب ضد ملفه. الفصل ده بيوري ده بيحصل، على ملفات حقيقية، في اللاب.</p>
+<h3 id="chEV_01">الإثبات: byte واحد ضد SHA-256</h3>
+<p>نسخت ملف Notepad++ بتاعي لـ <code>a.exe</code> و<code>b.exe</code>، وبعدين قلبت byte واحد بالظبط في <code>b.exe</code> عند offset 100 (<code>d[100]^1</code>). الـ exact hashes:</p>
+<figure class="figure"><img src="assets/hashing/lab_e1_sha256.jpg" alt="الـ SHA-256 لـ a.exe وb.exe بعد تغيير byte واحد" loading="lazy"><figcaption>شكل 29. الـ evasion، متثبت: a.exe وb.exe مختلفين في byte واحد بالظبط، وقيم الـ SHA-256 بتاعتهم (5518AD65... مقابل 92072004...) مالهمش أي علاقة ببعض. الـ hash بتاع a.exe هو الـ lab IOC من فصل 6 - لأنه نسخة Notepad++ بتاعة الكاتب.</figcaption></figure>
+<p>قيمتين ملهمش أي علاقة ببعض. كل block rule وwatchlist وIOC متكتوب على الـ hash الأولاني بقى أعمى. وخد بالك من السلسلة عبر المقال كله: الـ hash بتاع <code>a.exe</code> (5518AD65...) هو نفسه الـ lab IOC من فصل 6 - لأن <code>a.exe</code> هو نسخة Notepad++ بتاعتي - والـ hash بتاع <code>b.exe</code> (92072004...) هو اللي ظاهر في حقول الـ Sysmon event في فصل 4 وفي الـ Sigma rule في فصل 9. ملف واحد متعدّل، متصوّر من تلات زوايا.</p>
+<h3 id="chEV_02">إيه اللي بيعيش بعد الـ byte: الـ similarity hash</h3>
+<p>نفس الزوج، بس TLSH بدل SHA-256:</p>
+<figure class="figure"><img src="assets/hashing/lab_e1_tlsh.jpg" alt="مسافة TLSH تساوي 1 بين a.exe وb.exe" loading="lazy"><figcaption>شكل 30. نفس الزوج تحت TLSH: المسافة = 1. الـ byte الواحد ماغيّرش حاجة للـ similarity hash - ده الـ miss بتاع الـ exact hash اللي الـ fuzzy hashing بيمسكه.</figcaption></figure>
+<p class="note">ملاحظة معملية: كل الـ hashes في الصور دي من ملفات تجريبية عند الكاتب (نسخة Notepad++، نسخة متعدّل فيها byte واحد، ملفات evidence معمولة للتجربة). الهدف توضيح الفكرة بس - دي مش IOCs لتهديدات حقيقية، ومحدش المفروض يعمل عليها block أو alert.</p>
+<p>المسافة 1: بالنسبة للـ similarity hash الملف ماتحركش تقريباً. دي الإجابة العملية لمشكلة الـ Pyramid of Pain من فصل 1 - الـ exact hashes سهل يتهرب منها، والـ fuzzy hashes بتغلّي التكلفة - مع حدود فصل 3 لسه موجودة: TLSH محتاج محتوى كفاية عشان يقيّم (الملفات الصغيرة أوي بيرفضها)، والـ payloads المتعاملين بـ packer أو تشفير بتخبي محتواها عن أي تشابه مبني على المحتوى.</p>
+<h3 id="chEV_03">قاموس الـ evasion، متوزّع على الطبقات</h3>
+<p>أي حاجة المهاجم بيعملها في الملف واحدة من شوية حركات، وكل حركة بتكسر طبقة معينة: تعديل أو إضافة bytes (بيكسر الـ exact hashes، وبيقع في الـ fuzzy hashing)، إعادة build بـ imports مختلفة (بيكسر الـ imphash كمان)، pack أو تشفير الـ payload (بيكسر تشابه المحتوى لحد وقت التنفيذ)، أو تسمية الملف باسم شبه ملفات النظام (بيكسر الـ rules المبنية على الاسم، ومابيكسرش ولا hash). MITRE ATT&amp;CK مصنّف دول تحت Obfuscated Files or Information (T1027) وMasquerading (T1036). والخلاصة الدفاعية هي اللي المقال بيرجعلها: طبّق الـ exact وimphash والـ fuzzy مع بعض، وسيب behavior detections لليوم اللي التلاتة يفشلوا فيه.</p>
+<p class="refline">المراجع: <a href="#ref20">[20]</a> MITRE ATT&amp;CK, Obfuscated Files or Information (T1027) - <a href="https://attack.mitre.org/techniques/T1027/" target="_blank" rel="noopener">https://attack.mitre.org/techniques/T1027/</a><br><a href="#ref21">[21]</a> MITRE ATT&amp;CK, Masquerading (T1036) - <a href="https://attack.mitre.org/techniques/T1036/" target="_blank" rel="noopener">https://attack.mitre.org/techniques/T1036/</a><br><a href="#ref24">[24]</a> ssdeep, context-triggered piecewise hashing - <a href="https://ssdeep-project.github.io/ssdeep/index.html" target="_blank" rel="noopener">https://ssdeep-project.github.io/ssdeep/index.html</a></p>
+<h2 id="chDE">الفصل 9: الـ detection engineering - من hash لـ rule شغّالة</h2>
+<p>الـ IOC في ملف CSV مابيكشفش حاجة. بين تقرير الـ intel والـ alert الشغّال في pipeline، والفصل ده ماشي فيها بالـ rule اللي أنا فعلاً شغّلتها في اللاب.</p>
+<h3 id="chDE_01">دورة الحياة</h3>
+<p dir="ltr"><strong>تجميع (تقرير/feed)  →  Normalize (حروف، نوع، dedupe)  →  صياغة (Sigma)  →  تحويل (sigma-cli)  →  نشر (lookup/alert)  →  اختبار (على telemetry بتاعتك)  →  متابعة (معدل false positives)  →  تقاعد (expiry)</strong></p>
+<p>الـ normalize كان درس فصل 4. والاختبار كان درس فصل 6: البَجين في استعلام الـ lookup بتاعي بالظبط هما اللي المرحلة دي موجودة عشان تمسكهم. والمتابعة والتقاعد هما المرحلتين اللي محدش بيرسمهم: كل IOC معاه مصدر وثقة وتاريخ انتهاء (خصائص MISP في فصل 5)، لأن hash حملته خلصت من سنة هو دوشة بتدفع محللين يقروها.</p>
+<h3 id="chDE_02">الإثبات: من Sigma لـ Splunk بأمر واحد</h3>
+<p>الـ rule هي قاعدة Sigma عادية لـ process creation بتماتش على حقل Hashes، والمحوّل هو sigma-cli بـ backend بتاع Splunk وpipeline بتاع Sysmon:</p>
+<figure class="figure"><img src="assets/hashing/lab_e3_sigma.jpg" alt="sigma convert بيطلّع استعلام Splunk" loading="lazy"><figcaption>شكل 31. sigma convert -t splunk -p sysmon rule.yml: الـ Sigma rule بتقلب سطر SPL واحد، EventID=1 Hashes="*SHA256=92072004...*". الـ hash جوا الـ rule هو الملف متعدّل الـ byte - الـ rule والـ telemetry بيشاوروا على نفس الملف.</figcaption></figure>
+<p>سطر واحد طلع: <code>EventID=1 Hashes="*SHA256=92072004...*"</code>. ملاحظتين نشر من اللاب بتاعي: الـ Splunk عندي عارف الحقل باسم <code>EventCode</code> مش <code>EventID</code>، فالـ SPL المحوّل محتاج تعديل الكلمة دي قبل ما يماتش (رجعنا للـ normalization تاني)؛ والـ hash جوا الـ rule هو الملف متعدّل الـ byte من فصل 8 - الـ rule والـ telemetry وتجربة الـ evasion كلهم بيشاوروا على نفس الملف، وده شكل الـ detection loop المقفول.</p>
+<h3 id="chDE_03">الـ rule مكانها فين على الخريطة</h3>
+<p>الـ rule المبنية على hash في process creation بتستاهل مكانها ضد الملفات متغيّرة الاسم والمكان - حالات الـ Masquerading (T1036) اللي الـ rule المبنية على الاسم عمياء فيها والملف لسه هو الملف. ومابتقولش حاجة عن الـ payloads المعمولها pack أو اللي في الميموري بس (منطقة T1027)، وعشان كده الـ mapping على ATT&amp;CK أداة تحديد نطاق: بيقولك أنهي خطوات هجوم الـ detection بتاعتك شايفاها، وأنهي خطوات محتاجة rule سلوكية بدالها. أرقام الـ techniques هنا مذكورة كمراجع عامة، مش نسبة لأي جهة.</p>
+<p class="refline">المراجع: <a href="#ref19">[19]</a> sigma-cli (SigmaHQ) - <a href="https://github.com/SigmaHQ/sigma-cli" target="_blank" rel="noopener">https://github.com/SigmaHQ/sigma-cli</a><br><a href="#ref25">[25]</a> Sigma specification - <a href="https://github.com/SigmaHQ/sigma-specification/" target="_blank" rel="noopener">https://github.com/SigmaHQ/sigma-specification/</a><br><a href="#ref20">[20]</a> MITRE ATT&amp;CK T1027 - <a href="https://attack.mitre.org/techniques/T1027/" target="_blank" rel="noopener">https://attack.mitre.org/techniques/T1027/</a><br><a href="#ref21">[21]</a> MITRE ATT&amp;CK T1036 - <a href="https://attack.mitre.org/techniques/T1036/" target="_blank" rel="noopener">https://attack.mitre.org/techniques/T1036/</a></p>
+<h2 id="chFP">الفصل 10: الـ false positives ولستة المعروف وسليم</h2>
+<p>الـ detection بيفشل في اتجاهين. فصل 6 ورّى واحد: لستة IOCs بتماتش أداة إدارة سليمة 636 مرة. الاتجاه التاني أهدى - alerts على ملفات معروف إنها سليمة أصلاً - والتحكم فيه هو لستة الـ known-good: اعمل hash للملفات اللي واثق فيها، وبطّل تبص عليها.</p>
+<h3 id="chFP_01">الإثبات: ملف نظام اللستة مش عارفاه</h3>
+<p>المرجع هنا هو NSRL بتاع NIST، وبيتسأل من خلال الـ API العام hashlookup بتاع CIRCL. عملت hash لـ <code>kernel32.dll</code> بتاع الجهاز ده وسألت:</p>
+<figure class="figure"><img src="assets/hashing/lab_e2_kernel32.jpg" alt="Get-FileHash لـ kernel32.dll" loading="lazy"><figcaption>شكل 32. Get-FileHash على kernel32.dll بتاع الجهاز ده: SHA-256 يساوي 6B841213.... ملف نظام حقيقي، متعموله hash بأمانة - الصورة الجاية بتوري لستة المعروف وسليم بتقول عنه إيه.</figcaption></figure>
+<figure class="figure"><img src="assets/hashing/lab_e2_circl.jpg" alt="CIRCL hashlookup بيرد Non existing SHA-256" loading="lazy"><figcaption>شكل 33. CIRCL hashlookup (بيقدّم بيانات NSRL) بيرد 'Non existing SHA-256' على نفس الـ kernel32.dll. الـ miss في لستة المعروف وسليم فجوة تغطية، مش حكم.</figcaption></figure>
+<p>والرد هو مفاجأة الفصل ده الصادقة: <em>Non existing SHA-256</em>. ملف نظام Windows أصلي، مش موجود في داتا الـ known-good. ومفيش فيه أي شك - التفسير هو التغطية: الـ NSRL بيتأخر عن builds ولغات Windows، والـ hash بتاع ملف النظام بيتغيّر مع كل build. الدرس العملي قاطع في الاتجاهين. الـ <em>hit</em> في الـ known-good تقليل دوشة قوي (اشطبه من طابور الـ alerts). أما الـ <em>miss</em> فمش حكم خالص: معناه "مش في الداتا دي"، وأبداً معناه "خبيث". عامله بالشكل ده في منطق الـ allowlisting بتاعك، وإلا تحكم الـ false positives يقلب مصنع false negatives.</p>
+<p class="refline">المراجع: <a href="#ref17">[17]</a> NIST, National Software Reference Library (NSRL) - <a href="https://www.nist.gov/itl/csd/secure-systems-and-applications/national-software-reference-library-nsrl" target="_blank" rel="noopener">https://www.nist.gov/itl/csd/secure-systems-and-applications/national-software-reference-library-nsrl</a><br><a href="#ref18">[18]</a> CIRCL hashlookup - <a href="https://circl.lu/services/hashlookup/" target="_blank" rel="noopener">https://circl.lu/services/hashlookup/</a></p>
+<h2 id="chFX">الفصل 11: الفورنزكس - الـ hash كـ chain of custody</h2>
+<p>للـ response استخدام تاني للـ hashing ملوش علاقة بالـ detection: إثبات إن الأدلة ماتغيّرتش. توجيه NIST الفورنزي حاطط التحقق من السلامة في نص التعامل مع الأدلة، وعملياً التحقق ده عبارة عن manifest بـ SHA-256.</p>
+<h3 id="chFX_01">الإثبات: خمس ملفات، اتنسخوا، واتقارنوا</h3>
+<p>عملت خمس ملفات evidence تجريبية، عملتلهم hash (الـ manifest)، نسخت الفولدر بـ <code>robocopy /MIR</code> لوجهة جديدة فاضية، عملت re-hash للنسخ، وقارنت الـ manifestين:</p>
+<figure class="figure"><img src="assets/hashing/lab_e4_before.jpg" alt="الـ SHA-256 manifest لملفات الـ evidence قبل النسخ" loading="lazy"><figcaption>شكل 34. الـ chain of custody، قبل: خمس ملفات evidence تجريبية والـ SHA-256 manifest بتاعهم.</figcaption></figure>
+<figure class="figure"><img src="assets/hashing/lab_e4_after.jpg" alt="إعادة الـ hash للنسخة ونتيجة Compare-Object تساوي IDENTICAL" loading="lazy"><figcaption>شكل 35. بعد: robocopy /MIR لفولدر جديد، إعادة hash، وCompare-Object بيرد IDENTICAL. العدّادات بتوري ملفات متخطّية (إعادة تشغيل على فولدر متزامّن قبل كده)؛ مقارنة الـ hash هي الإثبات.</figcaption></figure>
+<p class="note">ملاحظة معملية: كل الـ hashes في الصور دي من ملفات تجريبية عند الكاتب (نسخة Notepad++، نسخة متعدّل فيها byte واحد، ملفات evidence معمولة للتجربة). الهدف توضيح الفكرة بس - دي مش IOCs لتهديدات حقيقية، ومحدش المفروض يعمل عليها block أو alert.</p>
+<p><code>Compare-Object</code> بيرد IDENTICAL: كل ملف منسوخ مطابق للأصل byte بـ byte. (تفصيلة صادقة في الصورة: عدّادات robocopy بتوري الملفات متخطّية، لأن التشغيلة دي بتزامّن فولدر منسوخ قبل كده - الملفات اللي ماتغيّرتش بتتخطّى by design. إثبات السلامة هو مقارنة الـ hash، مش عدّادات النسخ. وتحذير تاني عن <code>/MIR</code> من التجربة: بيمسح من الوجهة أي حاجة مش موجودة في المصدر، فالوجهة لازم تكون دايماً فولدر مخصص فاضي.)</p>
+<p>والعادة الشغالة نفسها على أي مقياس: hash قبل الـ acquisition، بعد النقل، عند كل تسليم، وأي اختلاف يتعامل كحدث يتدوّن، مش رقم يتصلّح.</p>
+<p class="refline">المراجع: <a href="#ref22">[22]</a> NIST SP 800-86, Guide to Integrating Forensic Techniques into Incident Response - <a href="https://csrc.nist.gov/pubs/sp/800/86/final" target="_blank" rel="noopener">https://csrc.nist.gov/pubs/sp/800/86/final</a><br><a href="#ref23">[23]</a> Microsoft Learn, robocopy - <a href="https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy</a></p>
+<h2 id="chLIM">الفصل 12: الحدود - فين الـ hash مابيفيدش</h2>
+<p>الخلاصة الصادقة لكل اللي فات، في مكان واحد:</p>
+<ul>
+<li><strong>byte واحد بيتقاعد الـ exact hash.</strong> متثبت في فصل 8: الـ SHA-256 بتاع الملف المتعدّل مالوش أي علاقة بالأصل. الـ exact-hash IOCs بضاعة بتبوظ وليها تاريخ انتهاء.</li>
+<li><strong>الـ fuzzy hashing محتاج محتوى وحجم.</strong> TLSH بيرفض الملفات الصغيرة أوي، والـ payloads المعمولها pack أو تشفير مابتدّيش تشابهها إلا للغلاف (فصل 3).</li>
+<li><strong>imphash بيتتبع الـ imports مش الملفات.</strong> اعمل build بـ imports مختلفة وهو بيتغيّر؛ والملفات اللي imports فيها قليلة أو مفيش مابتديلوش حاجة يمسك فيها (فصل 3).</li>
+<li><strong>لستة الـ known-good فيها فجوات.</strong> متثبت في فصل 10: ملف نظام Windows حقيقي مش موجود في بيانات NSRL ورا CIRCL hashlookup. الـ miss مش حكم.</li>
+<li><strong>المهاجمين بيشغّلوا ملفات موثوقة.</strong> أدوات living-off-the-land شايلة hashes شرعية وساعات معمولها allowlist - الـ 636 match منخفضة الثقة في فصل 7 كانت بالظبط التصادم ده.</li>
+<li><strong>الـ hash هوية، مش نية أبداً.</strong> قاعدة فصل 1 عاشت كل الفصول: نفس الـ hash ممكن يبقى malware على جهاز وأداة إدارة على جهاز تاني. السياق هو اللي بيحسم.</li>
+<li><strong>الخوارزمية قرار ثقة.</strong> SHA-1 اتكسر عملياً (فصل 2، متعاد إنتاجه)؛ وMD5 أكتر. القرارات الأمنية مكانها SHA-256 وأحسن.</li>
+<li><strong>مشاركة الـ hashes ليها جوانب خصوصية.</strong> الرفع على الـ sandboxes العامة ممكن يسرّب إنك بتحقق (فصل 5). الاستعلام بالـ hash بس هو الخطوة الأولى الأأمن.</li>
+</ul>
+<p>ولا حاجة في ده ضد الـ hashing. ده بيحاجج إنك تمسكه صح: متطبّق مع الـ structural والـ similarity hashes، متعمله normalize قبل ما تثق فيه، متجرّب على الـ telemetry بتاعتك، ومدعوم بـ behavior detections لكل حاجة الـ hash مش شايفاها.</p>
+<h2 id="ch8">الفصل 13: النتايج: إيه اللي الأدلة بتقوله</h2>
+<h3 id="ch8_01">النتيجة 1: الـhash الدقيق طبقة هوية، ومش أكتر</h3>
+<p>كل حاجة في المقال بتشاور على نفس الاتجاه. تطابق SHA-256 بيقولك إن ملفين نفس الـbytes، وسلوك الـavalanche المقاس (129.9 من 256 bit اتقلبوا في المتوسط على 400 تجربة) بيضمن إن مفيش نسخة قريبة بتعدي، ومفيش نسخة قريبة بتتلقط كمان. هو أعلى إشارة ثقة في المنظومة، وأسهل واحدة المهاجم يبدّلها: rebuild واحد والـIOC يبقى قبر. هوية، مش حكم، ومش دوام.</p>
+<h3 id="ch8_02">النتيجة 2: الـhashes البنيوية والتشابهية هي الكوبري عبر الـrebuilds</h3>
+<p>تجربة PuTTY هي الإثبات اللي برجعله: نسختين، صفر hex مشترك في SHA-256، imphash متطابق، ومسافة TLSH تساوي 19 مقابل 463 و688 للغرباء. لو برنامج الـintel بيخزن hashes دقيقة بس، هو بيتعلم نفس العيلة من الصفر مع كل تحديث نسخة. الـimphash وTLSH هم إزاي تنقل المعرفة عبر الـrebuilds، مع التحفظ الموثق إن الاتنين ممكن يتهاجموا عمداً.</p>
+<h3 id="ch8_03">النتيجة 3: التكلفة المخفية للـdetection بالـhash هي الـnormalization، مش الـmatching</h3>
+<p>مطابقة hash سطر واحد في أي لغة استعلام. الشغل الحقيقي قبلها: Sysmon بيحط تلات خوارزميات في حقل Hashes واحد، وأحداث ويندوز بتسمي الحقول غير الـEDR telemetry، وفروق حالة الأحرف والترميز بتكسر الـjoins في صمت. الفصل الرابع ورّى نفس الملف بيظهر بأسماء حقول مختلفة عبر المصادر. الفرق اللي بتدفع في الـparsing والـnormalization بتطلع قيمة من الـhashes؛ والفرق اللي بتجمع قوايم IOCs بس بتطلع دوشة.</p>
+<h3 id="ch8_04">النتيجة 4: الـIOC من غير سياق بيحرق وقت المحللين</h3>
+<p>الـhunt الـsynthetic خلّى ده قابل للقياس: join واحد ساذج على lookup طلّع 638 match، منهم 636 لأداة إدارة سليمة واحدة. درجات الثقة وتواريخ الانتهاء وأسماء المصادر مش بيروقراطية؛ دي الفرق بين إشارة وطوفان. وأي hash في أي feed ممكن يكون ملف شرعي، وعشان كده الحظر على hash من غير سياق هو انقطاع خدمة مستني يحصل.</p>
+<h3 id="ch8_05">النتيجة 5: الـcorrelation محتاج hashes وسلوك، مش واحد منهم لوحده</h3>
+<p>تقريري Unit 42 وKaspersky مش مشتركين في أي IOC، ومع ذلك بيوصفوا أسلوب متشابه. الـhashes لوحدها بتقول "مفيش تداخل"؛ والسلوك لوحده بيقول "متشابه". الخلاصة الأمينة محتاجة القناتين، متكتوبة بدرجات ثقة وفجوات صريحة. وده، أكتر من أي query، هو الفرق بين الـcorrelation وبين مطابقة الأنماط على حكاية.</p>
+<h3 id="ch8_06">إرشادات تشغيلية</h3>
+<div class="tbl" dir="ltr"><table><thead><tr><th>القرار</th><th>الإرشاد</th><th>مسند بـ</th></tr></thead><tbody><tr><td>الخوارزمية للـdetections الجديدة</td><td>SHA-256؛ وسيب مطابقة MD5/SHA-1</td><td>إثبات SHAttered (ف2)، قياس السرعة (ف2)</td></tr><tr><td>القلق من الحجم</td><td>SHA-256 بيجري ~1.8 جيجا/ثانية مع SHA-NI؛ السرعة مش سبب للإبقاء على MD5</td><td>قياس openssl (ف2)</td></tr><tr><td>تتبع عيلة</td><td>imphash + TLSH جنب الـhashes الدقيقة</td><td>إثبات إعادة بناء PuTTY (ف3)</td></tr><tr><td>نظافة الـIOCs</td><td>مصدر وثقة وتاريخ انتهاء على كل مدخل</td><td>طوفان الـ638 match (ف6)</td></tr><tr><td>الحظر</td><td>أبداً على hash من غير سياق مسار/موقّع</td><td>حالة الأداة السليمة (ف6)</td></tr><tr><td>التغطية طويلة المدى</td><td>قرن كل قاعدة hash بقاعدة سلوك</td><td>Pyramid of Pain (ف1)، كل ف3</td></tr></tbody></table></div>
+<h3 id="ch8_07">أسئلة مفتوحة</h3>
+<p>فين بيقف ده، بأمانة. هل الخواص دي بتثبت على حجم مؤسسة، ملايين الأحداث في اليوم، مش آلاف زي هنا؟ إيه عتبة TLSH اللي بتفصل العيلة عن الغريب عبر عيلات malware مختلفة، مش نسختي PuTTY؟ والـfuzzy hashes بتتصرف إزاي مع packers بتعشّي الـimports والمحتوى مع كل build؟ دول محتاجين داتا أكبر من sandbox واحد، وأفضّل أسميهم مفتوحين بدل ما ألفّق إجابة.</p>
+<h3 id="ch8_08">الختام</h3>
+<p>الرحلة مشيت من الـhash كـfingerprint لحد الـhash كجزء من منظومة: الـintel بينتجه، والـSIEM بيدور عليه، والـhunter بيتأكد منه، والمحلل بيكتب هو بيثبت إيه ومابيثبتش إيه. اكتب اللي تعرفه، واللي ماتعرفوش. ده اللي بيبيّن المحلل الحقيقي.</p>
+<p dir="ltr"><strong>Hash → Intel → SIEM → Hunter → Findings</strong></p>
+<p>اكتب اللي تعرفه، واللي ماتعرفوش</p>
+<h2 id="rvs">الحقيقي وال synthetic</h2><ul><li>حقيقي: اللاب بتاع الكاتب، ظاهر في الصور: جدول Splunk Sysmon، حقول الـ event، الـ IOC lookup، الـ prevalence، الـ retro-hunt والـ imphash pivot (جهاز Windows 11 واحد، WS01، index=main)، تحويل sigma-cli، الـ hash بتاع kernel32.dll ورد CIRCL hashlookup، فحص سلامة نسخة الـ evidence، وتجربة الـ byte-flip (a.exe مقابل b.exe، مسافة TLSH تساوي 1). كل الـ hashes في اللقطات دي ملفات تجريبية بتاعة الكاتب - نسخة Notepad++ ونسخة متعدّلة بـ byte - مستخدمة كـ lab IOCs، مش تهديدات حقيقية.</li><li>حقيقي: الأوامر بتتنفذ في sandbox، ومخرجاتها (avalanche: حرف واحد قلب 141 من 256 bit و63 من 64 hex char؛ مسافات TLSH على variants synthetic: 5 و7 و44؛ imphash على ملفات pip launcher سليمة لشرح الطريقة بس). جديد في النسخة دي: زوج التصادم SHA-1 من shattered.io اتعاد حسابه محلياً (SHA-1 متطابق، SHA-256 مختلف)، imphash وTLSH على ملفات PuTTY 0.78/0.79 الحقيقية (imphash متطابق، مسافة 19 مقابل 463/688 لملفات غريبة)، توزيع الـavalanche على 400 تجربة (متوسط 129.9 bit)، وأرقام سرعة openssl.</li><li>حقيقي: ناتج منطق الـ hunt على الداتا الـ synthetic: 638 match = 2 high-confidence + 636 low-confidence لأداة إدارة سليمة واحدة. الـ pivot على WS-014 وتواريخ الـ retro-hunt (15 و8 يوم) مخرجات فعلية لكود Python.</li><li>Synthetic / mock-up: Sysmon events (5,003 حدث، 35 جهاز)، أسماء الأجهزة والمستخدمين، الـ IOC feed، سجلات CSV/MISP، وصفحة VirusTotal (شكل توضيحي). الـ IPs من documentation ranges. الـ SIEM queries بصيغة SPL-style ومتنفذة بمنطق Python مكافئ. الرسومات والـ GIFs في المقال مرسومة خصيصاً للشرح.</li><li>مش مدّعى: ATT&amp;CK technique IDs غير صفحات المراجع العامة المذكورة (أسماء الـ tactics بس في دراسة الحالة)، أي ادعاءات عن شرائح VirusTotal، شكل تقارير CISA، أو إن تقريري Unit 42 وSecurelist لنفس الجهة: الاتنين بيشتركوا في أسلوب مشابه ومفيش IOCs مشتركة.</li></ul>
+<h2 id="refs">المراجع</h2><ol class="reflist" dir="ltr"><li id="ref1">D. Bianco, "The Pyramid of Pain" (SpeakerDeck) - <a href="https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations" target="_blank" rel="noopener">https://speakerdeck.com/davidjbianco/the-pyramid-of-pain-intel-driven-detection-and-response-to-increase-your-adversarys-cost-of-operations</a></li><li id="ref2">Google Online Security Blog, "Announcing the first SHA-1 collision" (2017-02-23) - <a href="https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html" target="_blank" rel="noopener">https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html</a></li><li id="ref3">NIST CSRC, "Research results on SHA-1 collisions" (2017-02-24) - <a href="https://csrc.nist.gov/news/2017/research-results-on-sha-1-collisions" target="_blank" rel="noopener">https://csrc.nist.gov/news/2017/research-results-on-sha-1-collisions</a></li><li id="ref4">Unit 42, TGR-STA-0049 custom RATs targeting Southeast Asia governments (Nov 16, 2026) - <a href="https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/" target="_blank" rel="noopener">https://unit42.paloaltonetworks.com/custom-rats-target-southeast-asia-governments/</a></li><li id="ref5">Microsoft Learn, Sysinternals Sysmon - <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon</a></li><li id="ref6">Mandiant, "Tracking Malware with Import Hashing" (2014) - <a href="https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/threat-intelligence/tracking-malware-import-hashing/</a></li><li id="ref7">VirusTotal blog, "VirusTotal imphash" (2014) - <a href="https://blog.virustotal.com/2014/02/virustotal-imphash.html" target="_blank" rel="noopener">https://blog.virustotal.com/2014/02/virustotal-imphash.html</a></li><li id="ref8">TLSH, papers and technical overview - <a href="https://tlsh.org/papers.html" target="_blank" rel="noopener">https://tlsh.org/papers.html</a></li><li id="ref9">Kaspersky Securelist, Operation ShadowCloud part 1 (Nov 17, 2026) - <a href="https://securelist.com/operation-shadowcloud-gitdoor/122004/" target="_blank" rel="noopener">https://securelist.com/operation-shadowcloud-gitdoor/122004/</a></li><li id="ref10">MISP data models - <a href="https://www.misp-project.org/datamodels/" target="_blank" rel="noopener">https://www.misp-project.org/datamodels/</a></li><li id="ref11">VirusTotal docs, VirusTotal Intelligence introduction - <a href="https://docs.virustotal.com/docs/virustotal-intelligence-introduction" target="_blank" rel="noopener">https://docs.virustotal.com/docs/virustotal-intelligence-introduction</a></li><li id="ref12">VirusTotal docs, Comments - <a href="https://docs.virustotal.com/docs/comments" target="_blank" rel="noopener">https://docs.virustotal.com/docs/comments</a></li><li id="ref13">VirusTotal docs, File search modifiers - <a href="https://docs.virustotal.com/docs/file-search-modifiers" target="_blank" rel="noopener">https://docs.virustotal.com/docs/file-search-modifiers</a></li><li id="ref14">abuse.ch, MalwareBazaar (GitHub) - <a href="https://github.com/abusech/MalwareBazaar/" target="_blank" rel="noopener">https://github.com/abusech/MalwareBazaar/</a></li><li id="ref15">SHAttered, the first SHA-1 collision files - <a href="https://shattered.io/" target="_blank" rel="noopener">https://shattered.io/</a></li><li id="ref16">PuTTY official site - <a href="https://www.chiark.greenend.org.uk/~sgtatham/putty/" target="_blank" rel="noopener">https://www.chiark.greenend.org.uk/~sgtatham/putty/</a></li><li id="ref17">NIST, National Software Reference Library (NSRL) - <a href="https://www.nist.gov/itl/csd/secure-systems-and-applications/national-software-reference-library-nsrl" target="_blank" rel="noopener">https://www.nist.gov/itl/csd/secure-systems-and-applications/national-software-reference-library-nsrl</a></li><li id="ref18">CIRCL hashlookup - <a href="https://circl.lu/services/hashlookup/" target="_blank" rel="noopener">https://circl.lu/services/hashlookup/</a></li><li id="ref19">sigma-cli (SigmaHQ) - <a href="https://github.com/SigmaHQ/sigma-cli" target="_blank" rel="noopener">https://github.com/SigmaHQ/sigma-cli</a></li><li id="ref20">MITRE ATT&amp;CK, Obfuscated Files or Information (T1027) - <a href="https://attack.mitre.org/techniques/T1027/" target="_blank" rel="noopener">https://attack.mitre.org/techniques/T1027/</a></li><li id="ref21">MITRE ATT&amp;CK, Masquerading (T1036) - <a href="https://attack.mitre.org/techniques/T1036/" target="_blank" rel="noopener">https://attack.mitre.org/techniques/T1036/</a></li><li id="ref22">NIST SP 800-86, Guide to Integrating Forensic Techniques into Incident Response - <a href="https://csrc.nist.gov/pubs/sp/800/86/final" target="_blank" rel="noopener">https://csrc.nist.gov/pubs/sp/800/86/final</a></li><li id="ref23">Microsoft Learn, robocopy - <a href="https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy" target="_blank" rel="noopener">https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy</a></li><li id="ref24">ssdeep, context-triggered piecewise hashing - <a href="https://ssdeep-project.github.io/ssdeep/index.html" target="_blank" rel="noopener">https://ssdeep-project.github.io/ssdeep/index.html</a></li><li id="ref25">Sigma specification - <a href="https://github.com/SigmaHQ/sigma-specification/" target="_blank" rel="noopener">https://github.com/SigmaHQ/sigma-specification/</a></li></ol>
+            </div>
+        </article>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <span class="footer-text">© 2026 Motaw3</span>
+            <div class="social-links">
+                <a href="https://github.com/Khaledak74" target="_blank" rel="noopener" aria-label="GitHub">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                </a>
+                <a href="https://www.linkedin.com/in/khaled-motawea-0861b1265/" target="_blank" rel="noopener" aria-label="LinkedIn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+                <a href="https://www.youtube.com/@Kmotawea" target="_blank" rel="noopener" aria-label="YouTube">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="https://medium.com/@motaweak226" target="_blank" rel="noopener" aria-label="Medium">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13.54 12a6.8 6.8 0 0 1-6.77 6.82A6.8 6.8 0 0 1 0 12a6.8 6.8 0 0 1 6.77-6.82A6.8 6.8 0 0 1 13.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42s-3.38-2.88-3.38-6.42 1.51-6.42 3.38-6.42 3.38 2.88 3.38 6.42zM24 12c0 3.17-.53 5.75-1.19 5.75s-1.19-2.58-1.19-5.75.53-5.75 1.19-5.75S24 8.83 24 12z"/></svg>
+                </a>
+                <a href="https://www.instagram.com/kmotawea16" target="_blank" rel="noopener" aria-label="Instagram">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.054 1.805.249 2.227.412.56.216.96.474 1.38.894.42.42.678.82.894 1.38.163.422.358 1.057.412 2.227.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.054 1.17-.249 1.805-.412 2.227-.216.56-.474.96-.894 1.38-.42.42-.82.678-1.38.894-.422.163-1.057.358-2.227.412-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.17-.054-1.805-.249-2.227-.412-.56-.216-.96-.474-1.38-.894-.42-.42-.678-.82-.894-1.38-.163-.422-.358-1.057-.412-2.227-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.054-1.17.249-1.805.412-2.227.216-.56.474-.96.894-1.38.42-.42.82-.678 1.38-.894.422-.163 1.057-.358 2.227-.412 1.266-.058 1.646-.07 4.85-.07zM12 0C8.741 0 8.333.014 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.132 5.775.072 7.053.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126s1.384 1.078 2.126 1.384c.766.296 1.636.499 2.913.558C8.333 23.986 8.741 24 12 24s3.667-.014 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.717 2.126-1.384s1.078-1.384 1.384-2.126c.296-.765.499-1.636.558-2.913.058-1.28.072-1.687.072-4.947s-.014-3.667-.072-4.947c-.06-1.277-.262-2.148-.558-2.913-.306-.788-.717-1.459-1.384-2.126s-1.384-1.078-2.126-1.384c-.765-.296-1.636-.499-2.913-.558C15.667.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                </a>
+            </div>
+            <span class="footer-text">Built with caffeine & curiosity</span>
+        </div>
+    </footer>
+    <script src="main.js?v=2"></script>
+</body>
+</html>

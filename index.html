@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>// Motaw3 // SOC Analyst</title>
+    <title>> Motaw3 > SOC Analyst</title>
     <meta name="description" content="SOC Analyst portfolio - Blue team labs, red team projects, SOC home labs, SDN/NFV research, and cybersecurity writeups.">
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
+    <link rel="preload" href="style.css?v=2" as="style">
+    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="icon" type="image/svg+xml" href="assets/motaw3-logo.svg">
 </head>
 <body>
     <nav class="navbar">
         <div class="container">
-            <a href="index.html" class="logo">Motaw3<span>//</span>soc</a>
+            <a href="index.html" class="logo" aria-label="Motaw3 - home"><img src="assets/motaw3-logo.svg" alt="" class="logo-mark">Motaw3</a>
             <div class="hamburger">
                 <span></span>
                 <span></span>
@@ -34,12 +35,20 @@
     <main>
         <section class="hero">
             <div class="container">
-                <h1 class="mono">// Motaw3</h1>
-                <p class="subtitle mono">SOC Analyst | Blue Team Defender | Threat Hunter</p>
-                <p class="tagline">Documenting the journey from zero to SOC analyst. Real SIEM alerts, real triage, real analyst thinking — not just answers.</p>
+                <figure class="hero-clip">
+                    <video autoplay muted loop playsinline poster="assets/luffy-poster.jpg" aria-label="One Piece - Luffy clip">
+                        <source src="assets/onepiece.mp4" type="video/mp4">
+                        <img src="assets/onepiece.gif" alt="One Piece - Luffy clip">
+                    </video>
+                </figure>
+                <h1 class="mono hero-name">Khaled Motaw3</h1>
+                <p class="subtitle mono">SOC <span class="sep">|</span> DFIR <span class="sep">|</span> BLUE TEAM</p>
+                <p class="tagline">Blue team operations, end to end: I build the lab, ship the detections, hunt through the telemetry, and write up what the evidence actually showed. Real labs, real telemetry, real analyst thinking &mdash; everything here is something I ran myself.</p>
+                <p class="tagline tagline-close">Away from the keyboard the rule stays the same: stay humble, stay curious, keep learning &mdash; mastery is a direction, not a destination.</p>
                 <div class="hero-cta">
-                    <a href="blue-team.html" class="btn btn-primary">Blue Team Labs →</a>
-                    <a href="soc-projects.html" class="btn btn-outline">SOC Projects</a>
+                    <a href="soc-projects.html" class="btn btn-primary">View Projects &rarr;</a>
+                    <a href="blog.html" class="btn btn-outline">Read the Blog</a>
+                    <a href="https://www.linkedin.com/in/khaled-motawea-0861b1265/" target="_blank" rel="noopener" class="btn btn-outline-purple">LinkedIn &#8599;</a>
                 </div>
             </div>
         </section>
@@ -47,30 +56,40 @@
         <div class="divider"></div>
 
         <section style="padding: 2rem 0;">
-            <div class="container">
+            <div class="container featured-wrap">
+                <div class="featured-writeup">
+                    <img src="assets/hashing/blog-hero-hashing.jpg" alt="Cover artwork of the hashing in blue team operations writeup" loading="lazy">
+                    <div class="featured-body">
+                        <span class="featured-kicker">Featured writeup</span><span class="badge-new" data-added="2026-11-28">New</span>
+                        <h3>Hashing in Blue Team Operations: Research with Runnable Proofs</h3>
+                        <p>From first principles and measured avalanche benchmarks to Sysmon telemetry, IOC quality, imphash and TLSH family tracking, and Splunk retro-hunts. Every claim is paired with a proof you can run. Published in English and Arabic.</p>
+                        <div class="featured-links">
+                            <a href="hashing-in-security-en.html">read writeup (EN) &rarr;</a>
+                            <a href="hashing-in-security-ar.html">read writeup (&#1593;&#1585;&#1576;&#1610;) &rarr;</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container" style="padding-top: 2.5rem;">
                 <h2 class="section-title">Highlights</h2>
                 <div class="card-grid">
-                    <div class="card">
+                    <div class="card card-blue">
                         <h3 class="mono">Blue Team Labs</h3>
                         <p>Hands-on defensive security labs. Real forensic challenges, malware analysis, and network investigations.</p>
                         <a href="blue-team.html" class="read-more">explore labs →</a>
                     </div>
-                    <div class="card">
+                    <div class="card card-red">
                         <h3 class="mono">Red Team Labs</h3>
                         <p>Offensive security simulations and attack methodology labs mapped to the Cyber Kill Chain.</p>
                         <a href="red-team.html" class="read-more">explore red team →</a>
                     </div>
-                    <div class="card">
+                    <div class="card card-purple">
                         <h3 class="mono">SOC Projects / Home Labs</h3>
                         <p>End-to-end SOC infrastructure builds, SIEM deployments, log pipelines, and detection engineering.</p>
                         <a href="soc-projects.html" class="read-more">explore projects →</a>
                     </div>
-                    <div class="card">
-                        <h3 class="mono">SDN / NFV Projects</h3>
-                        <p>Software-Defined Networking research, controller benchmarking, and programmable network security.</p>
-                        <a href="sdn-nfv.html" class="read-more">explore SDN/NFV →</a>
-                    </div>
-                    <div class="card">
+                    <div class="card card-green">
                         <h3 class="mono">Blog & Writeups</h3>
                         <p>Detailed walkthroughs, threat analysis, and lessons learned from hands-on labs and research.</p>
                         <a href="blog.html" class="read-more">read blog →</a>
@@ -78,6 +97,7 @@
                 </div>
             </div>
         </section>
+
     </main>
 
     <footer class="footer">
@@ -104,6 +124,19 @@
         </div>
     </footer>
 
-    <script src="main.js"></script>
+    <script src="main.js?v=2"></script>
+    <script>
+        // "New" badges: show only while the item is fresh.
+        // Convention: <span class="badge-new" data-added="YYYY-MM-DD">New</span>
+        // Any new writeup/project/card gets this span with its publish date;
+        // it hides automatically after 30 days.
+        (function () {
+            var DAYS = 30, now = Date.now();
+            document.querySelectorAll('.badge-new[data-added]').forEach(function (b) {
+                var t = Date.parse(b.getAttribute('data-added') + 'T00:00:00');
+                if (isNaN(t) || now - t > DAYS * 864e5) b.classList.add('badge-hidden');
+            });
+        })();
+    </script>
 </body>
 </html>

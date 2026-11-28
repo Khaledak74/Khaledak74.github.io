@@ -101,3 +101,26 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('%c🔒 SOC Analyst Portfolio', 'color: #39d0d8; font-size: 20px; font-weight: bold;');
     console.log('%cBuilt with curiosity & caffeine', 'color: #8b949e; font-size: 12px;');
 });
+
+/* --- Page transition: simple smooth fade between pages ---
+   Departure fades the page out briefly; arrival uses the page-fade-in
+   animation already on body. Skipped for reduced-motion users. */
+(function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        var a = e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+        var href = a.getAttribute('href');
+        if (!href || href.charAt(0) === '#' || /^(mailto:|tel:)/i.test(href)) return;
+        if (/^(https?:)/i.test(href)) {
+            try {
+                var u = new URL(href, location.href);
+                if (u.origin !== location.origin || u.pathname === location.pathname) return;
+            } catch (err) { return; }
+        }
+        e.preventDefault();
+        document.body.classList.add('page-exit');
+        setTimeout(function () { location.href = href; }, 160);
+    });
+})();

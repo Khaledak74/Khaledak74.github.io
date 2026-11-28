@@ -101,7 +101,7 @@ p {
 }
 
 .section-title::before {
-    content: "// ";
+    content: "> ";
     color: var(--accent-cyan);
 }
 
@@ -147,6 +147,15 @@ main {
     font-weight: 600;
     color: var(--text-primary);
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+}
+
+.logo img.logo-mark {
+    height: 26px;
+    width: 26px;
+    margin-right: 0.45rem;
+    display: inline-block;
 }
 
 .logo span {
@@ -218,6 +227,20 @@ main {
     margin-bottom: 0.5rem;
 }
 
+.hero-hello {
+    font-size: 0.9rem;
+    color: var(--accent-purple);
+    margin-bottom: 0.75rem;
+}
+
+.hero-name {
+    text-shadow: 0 0 24px rgba(124, 58, 237, 0.35);
+}
+
+.hero .subtitle .sep {
+    color: var(--accent-purple);
+}
+
 .hero .subtitle {
     font-family: var(--font-mono);
     font-size: 1rem;
@@ -269,6 +292,19 @@ main {
     background: transparent;
     color: var(--accent-cyan);
     border: 1px solid var(--accent-cyan);
+}
+
+.btn-outline-purple {
+    background: transparent;
+    color: var(--accent-purple);
+    border: 1px solid var(--accent-purple);
+}
+
+.btn-outline-purple:hover {
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--accent-purple);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
 }
 
 .btn-outline:hover {
@@ -1498,4 +1534,256 @@ main {
         align-items: flex-start;
         gap: 0.5rem;
     }
+}
+
+
+
+/* --- Blog cards --- */
+.blog-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.blog-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: var(--transition);
+}
+
+.blog-card:hover {
+    border-color: var(--accent-cyan);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.blog-card-badge {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.9rem;
+    border-radius: 999px;
+    color: var(--accent-green);
+    background: rgba(63, 185, 80, 0.12);
+    border: 1px solid rgba(63, 185, 80, 0.35);
+}
+
+.blog-card-title {
+    font-size: 1.3rem;
+    line-height: 1.35;
+}
+
+.blog-card-desc {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.blog-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.blog-card-tags span {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    transition: var(--transition);
+}
+
+.blog-card-tags span:hover {
+    border-color: var(--accent-purple);
+    color: var(--accent-purple);
+    background: rgba(124, 58, 237, 0.12);
+    box-shadow: 0 0 12px rgba(124, 58, 237, 0.45);
+}
+
+.blog-card-img {
+    width: calc(100% + 3rem);
+    max-width: none;
+    margin: -1.5rem -1.5rem 0;
+    border-radius: 12px 12px 0 0;
+    display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+
+.blog-card-lesson {
+    color: var(--accent-yellow);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-light);
+    padding-top: 1rem;
+    margin-top: auto;
+}
+
+.blog-card-lesson .lesson-label {
+    font-weight: 600;
+}
+
+.blog-card-link {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+}
+
+.blog-card-links {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+
+
+/* --- Featured writeup banner (home) --- */
+.featured-wrap {
+    padding: 2rem 0 0;
+}
+
+.featured-writeup {
+    display: flex;
+    gap: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.featured-writeup:hover {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 18px rgba(124, 58, 237, 0.25);
+}
+
+.featured-writeup img {
+    width: 300px;
+    max-width: 42%;
+    object-fit: cover;
+    display: block;
+}
+
+.featured-body {
+    padding: 1.25rem 1.25rem 1.25rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.featured-kicker {
+    font-family: var(--font-mono);
+    color: var(--accent-purple);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.featured-body h3 {
+    font-size: 1.15rem;
+    line-height: 1.35;
+}
+
+.featured-body p {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.featured-links {
+    display: flex;
+    gap: 1.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-top: auto;
+}
+
+@media (max-width: 640px) {
+    .featured-writeup { flex-direction: column; }
+    .featured-writeup img { width: 100%; max-width: 100%; }
+    .featured-body { padding: 0 1.25rem 1.25rem; }
+}
+
+/* --- Hero clip (circle video under subtitle) --- */
+.hero-clip {
+    width: 200px;
+    height: 200px;
+    margin: 0.5rem auto 1rem;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid var(--accent-cyan);
+    box-shadow: 0 0 25px rgba(57, 208, 216, 0.35);
+}
+
+.hero-clip video,
+.hero-clip img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: none;
+}
+
+@media (max-width: 480px) {
+    .hero-clip { width: 160px; height: 160px; }
+}
+
+.tagline-close {
+    margin-top: -1.2rem;
+    font-size: 1rem;
+}
+
+/* --- New badge (auto-expires, see script in index.html) --- */
+.badge-new {
+    display: inline-block;
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #0a0e17;
+    background: var(--accent-green);
+    padding: 0.15rem 0.55rem;
+    border-radius: 20px;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+}
+
+.badge-new.badge-hidden { display: none; }
+
+/* --- Highlight cards: frame color by category --- */
+.card.card-blue::before   { background: var(--accent-cyan);   opacity: 1; }
+.card.card-red::before    { background: var(--accent-red);    opacity: 1; }
+.card.card-purple::before { background: var(--accent-purple); opacity: 1; }
+.card.card-green::before  { background: var(--accent-green);  opacity: 1; }
+
+.card.card-blue:hover   { border-color: var(--accent-cyan); }
+.card.card-red:hover    { border-color: var(--accent-red); }
+.card.card-purple:hover { border-color: var(--accent-purple); }
+.card.card-green:hover  { border-color: var(--accent-green); }
+
+/* --- Smooth page load: dark bg at first paint + light fade-in --- */
+html { background-color: #0a0e17; }
+
+body { animation: page-fade-in 0.25s ease-out; }
+
+@keyframes page-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* --- Page transition: simple fade-out on departure --- */
+body.page-exit {
+    opacity: 0;
+    transition: opacity 0.15s ease-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.page-exit { transition: none; }
 }
