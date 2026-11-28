@@ -1759,3 +1759,8 @@ main {
     color: var(--text-secondary);
     font-size: 0.88rem;
 }
+
+.tagline-close {
+    margin-top: -1.2rem;
+    font-size: 1rem;
+}
