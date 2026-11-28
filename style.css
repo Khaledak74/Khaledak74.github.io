@@ -218,6 +218,20 @@ main {
     margin-bottom: 0.5rem;
 }
 
+.hero-hello {
+    font-size: 0.9rem;
+    color: var(--accent-purple);
+    margin-bottom: 0.75rem;
+}
+
+.hero-name {
+    text-shadow: 0 0 24px rgba(124, 58, 237, 0.35);
+}
+
+.hero .subtitle .sep {
+    color: var(--accent-purple);
+}
+
 .hero .subtitle {
     font-family: var(--font-mono);
     font-size: 1rem;
@@ -269,6 +283,19 @@ main {
     background: transparent;
     color: var(--accent-cyan);
     border: 1px solid var(--accent-cyan);
+}
+
+.btn-outline-purple {
+    background: transparent;
+    color: var(--accent-purple);
+    border: 1px solid var(--accent-purple);
+}
+
+.btn-outline-purple:hover {
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--accent-purple);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
 }
 
 .btn-outline:hover {
@@ -1562,21 +1589,6 @@ main {
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
     background: var(--bg-secondary);
-    transition: var(--transition);
-}
-
-.blog-card-tags span:hover {
-    border-color: var(--accent-purple);
-    color: var(--accent-purple);
-    background: rgba(124, 58, 237, 0.12);
-    box-shadow: 0 0 12px rgba(124, 58, 237, 0.45);
-}
-
-.blog-card-img {
-    width: calc(100% + 3rem);
-    margin: -1.5rem -1.5rem 0;
-    border-radius: 12px 12px 0 0;
-    display: block;
 }
 
 .blog-card-lesson {
