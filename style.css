@@ -101,7 +101,7 @@ p {
 }
 
 .section-title::before {
-    content: "< ";
+    content: "> ";
     color: var(--accent-cyan);
 }
 
@@ -1709,58 +1709,70 @@ main {
     .featured-body { padding: 0 1.25rem 1.25rem; }
 }
 
-/* --- GIF break (home) --- */
-.gif-break {
-    padding: 0 0 2.5rem;
-}
-
-.gif-frame {
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
+/* --- Hero clip (circle video under subtitle) --- */
+.hero-clip {
+    width: 120px;
+    height: 120px;
+    margin: 1.75rem auto 0.5rem;
+    border-radius: 50%;
     overflow: hidden;
-    box-shadow: var(--shadow);
+    border: 2px solid var(--accent-cyan);
+    box-shadow: 0 0 25px rgba(57, 208, 216, 0.35);
 }
 
-.gif-frame img,
-.gif-frame video {
+.hero-clip video,
+.hero-clip img {
     display: block;
     width: 100%;
+    height: 100%;
+    object-fit: cover;
     max-width: none;
 }
 
-/* --- Features strip (home) --- */
-.features-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-    padding: 0 0 3rem;
-}
-
-.feature {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1.1rem 1.25rem;
-    transition: var(--transition);
-}
-
-.feature:hover {
-    border-color: var(--accent-purple);
-}
-
-.feature h4 {
-    font-family: var(--font-mono);
-    font-size: 0.95rem;
-    color: var(--accent-cyan);
-    margin-bottom: 0.4rem;
-}
-
-.feature p {
-    color: var(--text-secondary);
-    font-size: 0.88rem;
+@media (max-width: 480px) {
+    .hero-clip { width: 96px; height: 96px; }
 }
 
 .tagline-close {
     margin-top: -1.2rem;
     font-size: 1rem;
+}
+
+/* --- New badge (auto-expires, see script in index.html) --- */
+.badge-new {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #0a0e17;
+    background: var(--accent-green);
+    padding: 0.15rem 0.55rem;
+    border-radius: 20px;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+}
+
+.badge-new.badge-hidden { display: none; }
+
+/* --- Highlight cards: frame color by category --- */
+.card.card-blue::before   { background: var(--accent-cyan);   opacity: 1; }
+.card.card-red::before    { background: var(--accent-red);    opacity: 1; }
+.card.card-purple::before { background: var(--accent-purple); opacity: 1; }
+.card.card-green::before  { background: var(--accent-green);  opacity: 1; }
+
+.card.card-blue:hover   { border-color: var(--accent-cyan); }
+.card.card-red:hover    { border-color: var(--accent-red); }
+.card.card-purple:hover { border-color: var(--accent-purple); }
+.card.card-green:hover  { border-color: var(--accent-green); }
+
+/* --- Smooth page load: dark bg at first paint + light fade-in --- */
+html { background-color: #0a0e17; }
+
+body { animation: page-fade-in 0.25s ease-out; }
+
+@keyframes page-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
 }
