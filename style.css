@@ -101,7 +101,7 @@ p {
 }
 
 .section-title::before {
-    content: "// ";
+    content: "< ";
     color: var(--accent-cyan);
 }
 
@@ -147,6 +147,15 @@ main {
     font-weight: 600;
     color: var(--text-primary);
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+}
+
+.logo img.logo-mark {
+    height: 26px;
+    width: 26px;
+    margin-right: 0.45rem;
+    display: inline-block;
 }
 
 .logo span {
@@ -1601,6 +1610,7 @@ main {
 
 .blog-card-img {
     width: calc(100% + 3rem);
+    max-width: none;
     margin: -1.5rem -1.5rem 0;
     border-radius: 12px 12px 0 0;
     display: block;
@@ -1632,3 +1642,120 @@ main {
 }
 
 
+
+/* --- Featured writeup banner (home) --- */
+.featured-wrap {
+    padding: 2rem 0 0;
+}
+
+.featured-writeup {
+    display: flex;
+    gap: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.featured-writeup:hover {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 18px rgba(124, 58, 237, 0.25);
+}
+
+.featured-writeup img {
+    width: 300px;
+    max-width: 42%;
+    object-fit: cover;
+    display: block;
+}
+
+.featured-body {
+    padding: 1.25rem 1.25rem 1.25rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.featured-kicker {
+    font-family: var(--font-mono);
+    color: var(--accent-purple);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.featured-body h3 {
+    font-size: 1.15rem;
+    line-height: 1.35;
+}
+
+.featured-body p {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.featured-links {
+    display: flex;
+    gap: 1.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-top: auto;
+}
+
+@media (max-width: 640px) {
+    .featured-writeup { flex-direction: column; }
+    .featured-writeup img { width: 100%; max-width: 100%; }
+    .featured-body { padding: 0 1.25rem 1.25rem; }
+}
+
+/* --- GIF break (home) --- */
+.gif-break {
+    padding: 0 0 2.5rem;
+}
+
+.gif-frame {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.gif-frame img,
+.gif-frame video {
+    display: block;
+    width: 100%;
+    max-width: none;
+}
+
+/* --- Features strip (home) --- */
+.features-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    padding: 0 0 3rem;
+}
+
+.feature {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    transition: var(--transition);
+}
+
+.feature:hover {
+    border-color: var(--accent-purple);
+}
+
+.feature h4 {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    color: var(--accent-cyan);
+    margin-bottom: 0.4rem;
+}
+
+.feature p {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+}
